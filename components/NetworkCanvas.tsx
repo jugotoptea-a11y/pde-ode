@@ -124,7 +124,7 @@ export function NetworkCanvas({
         ctx.fillStyle = 'rgba(148, 163, 184, 0.85)';
         ctx.font = '10px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(`Línea ${idx + 1}: λ=${state.lambda} (τ=${state.tau}s) | q(1)=${qEnd.toFixed(1)}`, midX, midY - 6);
+        ctx.fillText(`Línea ${idx + 1}: λ=${state.lambda} (τ=${state.tau}s) | JSON ~119 B`, midX, midY - 6);
       });
 
       // Draw moving packet particles along PDE lines
@@ -201,9 +201,9 @@ export function NetworkCanvas({
 
         // Speed icon / text
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 9px sans-serif';
+        ctx.font = 'bold 8px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('🌊 Vel', sensorX, sY.speedY - 3);
+        ctx.fillText('🌊 Vel (~20B)', sensorX, sY.speedY - 3);
         ctx.font = '8px monospace';
         ctx.fillText(`${gw.sensors.speedSensor.waterSpeed}m/s`, sensorX, sY.speedY + 8);
 
@@ -218,8 +218,8 @@ export function NetworkCanvas({
 
         // Temp icon / text
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 9px sans-serif';
-        ctx.fillText('🌡️ Temp', sensorX, sY.tempY - 3);
+        ctx.font = 'bold 8px sans-serif';
+        ctx.fillText('🌡️ Temp (~20B)', sensorX, sY.tempY - 3);
         ctx.font = '8px monospace';
         ctx.fillText(`${gw.sensors.tempSensor.waterTemp}°C`, sensorX, sY.tempY + 8);
 
@@ -320,9 +320,9 @@ export function NetworkCanvas({
       // Server metrics
       ctx.fillStyle = '#e2e8f0';
       ctx.font = '9px monospace';
-      ctx.fillText(`z=${state.server.buffer.toFixed(1)} / ${SERVER_MAX_BUFFER}`, serverX, sBarY + 23);
-      ctx.fillText(`r(z)=${state.server.processingRate.toFixed(1)} / ε=${state.server.epsilon}`, serverX, sBarY + 34);
-      ctx.fillText(`CPU: ${state.server.cpuUtilization}%`, serverX, sBarY + 45);
+      ctx.fillText(`z=${state.server.buffer.toFixed(1)} paq (${state.server.bufferKB.toFixed(1)} kB)`, serverX, sBarY + 23);
+      ctx.fillText(`r(z)=${state.server.processingRate.toFixed(1)} paq/s (${state.server.processingRateKBS.toFixed(1)} kB/s)`, serverX, sBarY + 34);
+      ctx.fillText(`CPU: ${state.server.cpuUtilization}% | ε=${state.server.epsilon} paq/s`, serverX, sBarY + 45);
 
       // Discarded Packets Falling Effect if Overflow
       if (isUnoptimized && state.server.isBottleneck) {
@@ -345,7 +345,7 @@ export function NetworkCanvas({
         ctx.fillText('✅ ESTABILIZADO ISS', serverX, serverY + 70);
         ctx.font = '9px monospace';
         ctx.fillStyle = '#94a3b8';
-        ctx.fillText(`z* eq: ${state.server.zEquilibrium.toFixed(1)}`, serverX, serverY + 83);
+        ctx.fillText(`z* eq: ${state.server.zEquilibrium.toFixed(1)} paq`, serverX, serverY + 83);
       }
 
       ctx.restore();
@@ -392,13 +392,13 @@ export function NetworkCanvas({
 
       <div className="absolute top-3 right-4 z-10 flex items-center gap-3 bg-slate-900/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-700/60 text-xs text-slate-300">
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-sky-400"></span> Sensor Caudal/Vel
+          <span className="w-2.5 h-2.5 rounded-full bg-sky-400"></span> Sensor Caudal/Vel (~20B)
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Sensor Temp
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Sensor Temp (~20B)
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-0.5 bg-indigo-400"></span> Línea PDE
+          <span className="w-2.5 h-0.5 bg-indigo-400"></span> Línea PDE (JSON ~119B)
         </span>
       </div>
 
@@ -410,10 +410,10 @@ export function NetworkCanvas({
 
       <div className="bg-slate-900/90 border-t border-slate-800 px-4 py-2 flex items-center justify-between text-xs text-slate-400">
         <div className="flex items-center gap-4">
-          <span>Click en un <strong>Gateway</strong> para sintonizar sus sensores ambientales.</span>
+          <span>Consolidación Gateway: <strong>20B + 20B → 119B JSON</strong> (-25% peaje de red) | Escala en Bytes / Kilobytes (<strong>jamás 1 MB</strong>)</span>
         </div>
         <div className="font-mono text-slate-300">
-          Retardo PDE: τ = 1/λ = <strong>{state.tau}s</strong> | Capacidad Servidor ε = <strong>{state.server.epsilon} paq/s</strong>
+          Retardo PDE: τ = 1/λ = <strong>{state.tau}s</strong> | Capacidad Servidor ε = <strong>{state.server.epsilon} paq/s ({state.server.epsilonKBS} kB/s)</strong>
         </div>
       </div>
     </div>

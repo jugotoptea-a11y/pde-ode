@@ -29,15 +29,15 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       {/* 1. Status KPI */}
-      <div className={`p-3 rounded-xl border flex flex-col justify-between ${
+      <div className={`p-3 rounded-xl border flex flex-col justify-between transition-colors ${
         isBottleneck
-          ? 'bg-rose-950/40 border-rose-600/80 text-rose-200'
+          ? 'bg-rose-950/50 border-rose-600/80 text-rose-200'
           : isOptimized
           ? 'bg-emerald-950/40 border-emerald-600/80 text-emerald-200'
           : 'bg-slate-900/80 border-slate-800 text-slate-200'
       }`}>
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <span>Estado del Sistema</span>
+          <span>Estado del Servidor</span>
           {isBottleneck ? (
             <AlertOctagon className="w-4 h-4 text-rose-400 animate-pulse" />
           ) : (
@@ -50,31 +50,31 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
           ) : isOptimized ? (
             <span className="text-emerald-400">ESTABLE (ISS)</span>
           ) : (
-            <span className="text-amber-400">ZONA PRE-SATURADA</span>
+            <span className="text-amber-400">PRE-SATURACIÓN</span>
           )}
         </div>
         <div className="text-[10px] text-slate-400 mt-0.5">
-          {isBottleneck ? 'Desborde de búfer en curso' : 'Tráfico regularizado'}
+          {isBottleneck ? 'Desborde de cola en curso' : 'Consolidación IoT activa'}
         </div>
       </div>
 
       {/* 2. Packet Drop Rate */}
-      <div className={`p-3 rounded-xl border flex flex-col justify-between ${
+      <div className={`p-3 rounded-xl border flex flex-col justify-between transition-colors ${
         lossPercentage > 5
-          ? 'bg-rose-950/30 border-rose-700/60'
+          ? 'bg-rose-950/40 border-rose-700/70'
           : 'bg-slate-900/80 border-slate-800'
       }`}>
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <span>Pérdida de Paquetes</span>
+          <span>Pérdida de Datos</span>
           <ShieldAlert className={`w-4 h-4 ${lossPercentage > 5 ? 'text-rose-400' : 'text-emerald-400'}`} />
         </div>
-        <div className="mt-2 font-mono font-bold text-lg text-slate-100">
+        <div className="mt-2 font-mono font-bold text-lg text-slate-100 tabular-nums">
           <span className={lossPercentage > 5 ? 'text-rose-400' : 'text-emerald-400'}>
             {lossPercentage.toFixed(1)}%
           </span>
         </div>
-        <div className="text-[10px] text-slate-400">
-          {Math.floor(state.server.totalDropped)} paq descartados
+        <div className="text-[10px] text-slate-400 font-mono tabular-nums">
+          {Math.floor(state.server.totalDropped)} paq ({state.server.totalDroppedKB.toFixed(1)} kB)
         </div>
       </div>
 
@@ -84,42 +84,40 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
           <span>Búfer Servidor z(t)</span>
           <HardDrive className="w-4 h-4 text-sky-400" />
         </div>
-        <div className="mt-2 font-mono font-bold text-lg text-sky-400">
-          {state.server.buffer.toFixed(1)} <span className="text-xs text-slate-400 font-normal">/ {SERVER_MAX_BUFFER}</span>
+        <div className="mt-2 font-mono font-bold text-lg text-sky-400 tabular-nums">
+          {state.server.buffer.toFixed(1)} <span className="text-xs text-slate-400 font-normal">paq</span>
         </div>
-        <div className="text-[10px] text-slate-400">
-          {state.server.isEquilibriumFinite
-            ? `Equilibrio z* = ${state.server.zEquilibrium.toFixed(1)}`
-            : 'z* → ∞ (Inestable)'}
+        <div className="text-[10px] text-slate-400 font-mono tabular-nums">
+          {state.server.bufferKB.toFixed(1)} kB / {(SERVER_MAX_BUFFER * 0.119).toFixed(1)} kB
         </div>
       </div>
 
       {/* 4. Processing Rate r(z) */}
       <div className="p-3 rounded-xl border bg-slate-900/80 border-slate-800 flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <span>Salida r(z)</span>
+          <span>Salida Servidor r(z)</span>
           <Activity className="w-4 h-4 text-purple-400" />
         </div>
-        <div className="mt-2 font-mono font-bold text-lg text-purple-400">
+        <div className="mt-2 font-mono font-bold text-lg text-purple-400 tabular-nums">
           {state.server.processingRate.toFixed(1)} <span className="text-xs text-slate-400 font-normal">paq/s</span>
         </div>
-        <div className="text-[10px] text-slate-400">
-          Límite ε = {state.server.epsilon} paq/s
+        <div className="text-[10px] text-slate-400 font-mono tabular-nums">
+          {state.server.processingRateKBS.toFixed(2)} kB/s (máx {state.server.epsilonKBS.toFixed(1)} kB/s)
         </div>
       </div>
 
       {/* 5. CPU Utilization */}
       <div className="p-3 rounded-xl border bg-slate-900/80 border-slate-800 flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <span>Carga de Proceso</span>
+          <span>Carga de Servidor</span>
           <Cpu className="w-4 h-4 text-indigo-400" />
         </div>
-        <div className="mt-2 font-mono font-bold text-lg text-indigo-300">
-          {state.server.cpuUtilization}%
+        <div className="mt-2 font-mono font-bold text-lg text-indigo-300 tabular-nums">
+          {state.server.cpuUtilization.toFixed(0)}%
         </div>
         <div className="w-full bg-slate-800 h-1.5 rounded-full mt-1 overflow-hidden">
           <div
-            className={`h-full transition-all duration-300 ${
+            className={`h-full transition-all duration-200 ${
               state.server.cpuUtilization > 90
                 ? 'bg-rose-500'
                 : state.server.cpuUtilization > 70
@@ -134,17 +132,17 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
       {/* 6. Latency & Delay */}
       <div className="p-3 rounded-xl border bg-slate-900/80 border-slate-800 flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <span>Latencia en Cola</span>
+          <span>Latencia de Cola</span>
           <Clock className="w-4 h-4 text-slate-400" />
         </div>
-        <div className="mt-2 font-mono font-bold text-lg text-slate-100">
+        <div className="mt-2 font-mono font-bold text-lg text-slate-100 tabular-nums">
           {state.server.queueDelay} <span className="text-xs text-slate-400 font-normal">ms</span>
         </div>
-        <div className="text-[10px] font-mono">
+        <div className="text-[10px] font-mono tabular-nums">
           {isConditionMet ? (
-            <span className="text-emerald-400">wd &lt; (1-wu)ε ✓</span>
+            <span className="text-emerald-400 font-semibold">wd &lt; (1-wu)ε ✓</span>
           ) : (
-            <span className="text-rose-400">wd ≥ (1-wu)ε ✗</span>
+            <span className="text-rose-400 font-semibold">wd ≥ (1-wu)ε ✗</span>
           )}
         </div>
       </div>

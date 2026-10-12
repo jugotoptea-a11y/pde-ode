@@ -22,13 +22,14 @@ export default function Home() {
   const [simSpeed, setSimSpeed] = useState<number>(1);
   const [selectedGatewayIndex, setSelectedGatewayIndex] = useState<number>(0);
 
-  // Use a ref for the mutable simulation state to keep RAF loop smooth at 60fps
+  // Use a ref for the mutable simulation state to keep engine smooth
   const stateRef = useRef<SimulationState>(state);
   stateRef.current = state;
 
   const lastFrameTimeRef = useRef<number>(performance.now());
+  const lastUiUpdateRef = useRef<number>(performance.now());
 
-  // Simulation Loop
+  // Simulation Loop with UI throttling to keep numbers sharp and avoid font blur
   useEffect(() => {
     let animId: number;
 
@@ -41,13 +42,20 @@ export default function Home() {
         const dt = Math.min(0.08, (deltaMs / 1000) * simSpeed);
         const nextState = stepSimulation(stateRef.current, dt);
         stateRef.current = nextState;
-        setState(nextState);
+
+        // Throttle React state updates to ~15 FPS (~65ms)
+        // This completely eliminates DOM font blur / flickering while keeping numbers sharp and responsive
+        if (currentTime - lastUiUpdateRef.current >= 65) {
+          lastUiUpdateRef.current = currentTime;
+          setState(nextState);
+        }
       }
 
       animId = requestAnimationFrame(loop);
     };
 
     lastFrameTimeRef.current = performance.now();
+    lastUiUpdateRef.current = performance.now();
     animId = requestAnimationFrame(loop);
 
     return () => {
@@ -69,6 +77,7 @@ export default function Home() {
     setState((prev) => {
       const next = createInitialState(count, prev.mode);
       next.serverEpsilon = prev.serverEpsilon;
+      next.server.epsilon = prev.serverEpsilon;
       stateRef.current = next;
       return next;
     });
@@ -91,90 +100,124 @@ export default function Home() {
     });
   }, []);
 
-  // Handler: Update Gateway Environment
+  // Handler: Update Gateway Environment - ISOLATED PER NODE
   const handleUpdateGatewayEnvironment = useCallback((gwIndex: number, newEnv: EnvironmentalState) => {
+    // 1. Immediately and synchronously update stateRef so simulation loop does not clobber it
+    if (stateRef.current && stateRef.current.gateways && stateRef.current.gateways[gwIndex]) {
+      const telemetry = computeSensorTelemetry(newEnv);
+      stateRef.current.gateways[gwIndex].environment = { ...newEnv };
+      stateRef.current.gateways[gwIndex].sensors = {
+        speedSensor: { ...telemetry.speedSensor },
+        tempSensor: { ...telemetry.tempSensor },
+      };
+      stateRef.current.gateways[gwIndex].demand = telemetry.totalDemand;
+    }
+
+    // 2. Update React state immediately so sliders remain instantaneous and completely isolated
     setState((prev) => {
       const updatedGws = prev.gateways.map((gw, idx) => {
         if (idx === gwIndex) {
           const telemetry = computeSensorTelemetry(newEnv);
           return {
             ...gw,
-            environment: newEnv,
+            environment: { ...newEnv },
             sensors: {
-              speedSensor: telemetry.speedSensor,
-              tempSensor: telemetry.tempSensor,
+              speedSensor: { ...telemetry.speedSensor },
+              tempSensor: { ...telemetry.tempSensor },
             },
             demand: telemetry.totalDemand,
           };
         }
-        return gw;
+        return {
+          ...gw,
+          environment: { ...gw.environment },
+          sensors: {
+            speedSensor: { ...gw.sensors.speedSensor },
+            tempSensor: { ...gw.sensors.tempSensor },
+          },
+        };
       });
-      const next = { ...prev, gateways: updatedGws };
-      stateRef.current = next;
-      return next;
+      return { ...prev, gateways: updatedGws };
     });
   }, []);
 
   // Handler: Apply Weather Preset across all gateways
   const handleApplyPreset = useCallback((preset: WeatherPreset) => {
+    const newEnv = createInitialEnvironmentalState(preset);
+    if (stateRef.current && stateRef.current.gateways) {
+      stateRef.current.gateways.forEach((gw) => {
+        const telemetry = computeSensorTelemetry(newEnv);
+        gw.environment = { ...newEnv };
+        gw.sensors = {
+          speedSensor: { ...telemetry.speedSensor },
+          tempSensor: { ...telemetry.tempSensor },
+        };
+        gw.demand = telemetry.totalDemand;
+      });
+    }
+
     setState((prev) => {
-      const newEnv = createInitialEnvironmentalState(preset);
       const updatedGws = prev.gateways.map((gw) => {
         const telemetry = computeSensorTelemetry(newEnv);
         return {
           ...gw,
           environment: { ...newEnv },
           sensors: {
-            speedSensor: telemetry.speedSensor,
-            tempSensor: telemetry.tempSensor,
+            speedSensor: { ...telemetry.speedSensor },
+            tempSensor: { ...telemetry.tempSensor },
           },
           demand: telemetry.totalDemand,
         };
       });
-      const next = { ...prev, gateways: updatedGws };
-      stateRef.current = next;
-      return next;
+      return { ...prev, gateways: updatedGws };
     });
   }, []);
 
-  // Handler: Trigger Sudden Flood Spike in a gateway
+  // Handler: Trigger Sudden Flood Spike in a single gateway
   const handleTriggerSpike = useCallback((gwIndex: number) => {
+    const spikedEnv: EnvironmentalState = {
+      rainIntensity: 175,
+      waterSpeed: 11.5,
+      waterTemp: 24.0,
+    };
+
+    if (stateRef.current && stateRef.current.gateways && stateRef.current.gateways[gwIndex]) {
+      const telemetry = computeSensorTelemetry(spikedEnv);
+      stateRef.current.gateways[gwIndex].environment = { ...spikedEnv };
+      stateRef.current.gateways[gwIndex].sensors = {
+        speedSensor: { ...telemetry.speedSensor },
+        tempSensor: { ...telemetry.tempSensor },
+      };
+      stateRef.current.gateways[gwIndex].demand = telemetry.totalDemand;
+    }
+
     setState((prev) => {
       const updatedGws = prev.gateways.map((gw, idx) => {
         if (idx === gwIndex) {
-          const spikedEnv: EnvironmentalState = {
-            rainIntensity: 175,
-            waterSpeed: 11.5,
-            waterTemp: 24.0,
-          };
           const telemetry = computeSensorTelemetry(spikedEnv);
           return {
             ...gw,
-            environment: spikedEnv,
+            environment: { ...spikedEnv },
             sensors: {
-              speedSensor: telemetry.speedSensor,
-              tempSensor: telemetry.tempSensor,
+              speedSensor: { ...telemetry.speedSensor },
+              tempSensor: { ...telemetry.tempSensor },
             },
             demand: telemetry.totalDemand,
           };
         }
         return gw;
       });
-      const next = { ...prev, gateways: updatedGws };
-      stateRef.current = next;
-      return next;
+      return { ...prev, gateways: updatedGws };
     });
   }, []);
 
   // Handler: Reset Simulation
   const handleReset = useCallback(() => {
-    setState((prev) => {
-      const fresh = createInitialState(prev.numGateways, prev.mode);
-      fresh.serverEpsilon = prev.serverEpsilon;
-      fresh.server.epsilon = prev.serverEpsilon;
-      stateRef.current = fresh;
-      return fresh;
-    });
+    const fresh = createInitialState(stateRef.current.numGateways, stateRef.current.mode);
+    fresh.serverEpsilon = stateRef.current.serverEpsilon;
+    fresh.server.epsilon = stateRef.current.serverEpsilon;
+    stateRef.current = fresh;
+    setState(fresh);
   }, []);
 
   return (
@@ -259,7 +302,7 @@ export default function Home() {
           />
         </div>
 
-        {/* Environmental Sliders & Node Controls */}
+        {/* Environmental Sliders & Node Controls (Isolated side-by-side per node) */}
         <EnvironmentalControls
           gateways={state.gateways}
           selectedGatewayIndex={selectedGatewayIndex}

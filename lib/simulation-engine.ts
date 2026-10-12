@@ -8,10 +8,17 @@ import {
   WeatherPreset,
 } from './types';
 
+// Constants for IoT Packet Weights based on real telemetry specifications:
+export const LOCAL_SPEED_SENSOR_BYTES = 20; // ~20 B local raw reading
+export const LOCAL_TEMP_SENSOR_BYTES = 20;  // ~20 B local raw reading
+export const UNIFIED_PACKET_BYTES = 119;    // ~119 B JSON consolidated payload + IP/UDP headers
+export const SEPARATE_TX_BYTES = 158;       // ~158 B when sensors send individually with separate headers
+export const BANDWIDTH_SAVING_PERCENT = 24.7; // ~25% bandwidth saved by gateway consolidation
+
 export const SPATIAL_POINTS = 30; // Grid points along PDE line x in [0, 1]
 export const DEFAULT_LAMBDA = 1.8; // Effective propagation speed
-export const SERVER_MAX_BUFFER = 120; // Maximum physical buffer size before overflow
-export const GATEWAY_MAX_BUFFER = 80;
+export const SERVER_MAX_BUFFER = 120; // Maximum physical buffer size in packets (~14.28 kB)
+export const GATEWAY_MAX_BUFFER = 80; // Maximum gateway buffer in packets (~9.52 kB)
 
 export const DEFAULT_GATEWAY_LOCATIONS = [
   { name: 'Gateway 1 (Arroyo La 84)', location: 'Sector Norte - Cra 53 con Cll 84' },
@@ -38,39 +45,47 @@ export function createInitialEnvironmentalState(preset: WeatherPreset = 'dry'): 
 export function computeSensorTelemetry(env: EnvironmentalState) {
   // Speed and water flow calculation
   const speed = Math.max(0.2, env.waterSpeed);
-  // Cross section model approx for urban stream: A(h) ~ 4 * (0.2 + rain / 120)
+  // Cross section model approx for urban stream in Barranquilla: A(h) ~ 2.5 + (rain / 180) * 8.0
   const crossSection = 2.5 + (env.rainIntensity / 180) * 8.0;
   const flow = Number((speed * crossSection).toFixed(2));
   const temp = Number(env.waterTemp.toFixed(1));
 
-  // Traffic demand generation formula:
-  // Speed sensor generates more packets under turbulent water flow
-  // Rain generates alarms and telemetry bursts
-  const speedPackets = 4.0 + 0.35 * env.rainIntensity + 4.2 * (speed - 0.2);
-  const tempPackets = 2.5 + 0.12 * Math.abs(temp - 26) + 0.08 * env.rainIntensity;
-  const totalDemand = Number((speedPackets + tempPackets).toFixed(2));
+  // Traffic demand generation formula (sampling frequency increases during severe rain/flood):
+  // Speed sensor generates more samples under turbulent water flow
+  const speedRate = 4.0 + 0.35 * env.rainIntensity + 4.2 * (speed - 0.2);
+  const tempRate = 2.5 + 0.12 * Math.abs(temp - 26) + 0.08 * env.rainIntensity;
+  
+  // Total packets per second generated
+  const totalDemand = Number((speedRate + tempRate).toFixed(1));
+  // Total data rate in kB/s (each unified packet is 119 Bytes = 0.119 kB)
+  const demandKBS = Number(((totalDemand * UNIFIED_PACKET_BYTES) / 1000).toFixed(2));
 
   return {
     speedSensor: {
       waterSpeed: Number(speed.toFixed(2)),
       waterFlow: flow,
       waterTemp: temp,
-      generationRate: Number(speedPackets.toFixed(2)),
+      generationRate: Number(speedRate.toFixed(1)),
+      bytesRate: Number(((speedRate * LOCAL_SPEED_SENSOR_BYTES) / 1000).toFixed(2)),
+      rawSensorBytes: LOCAL_SPEED_SENSOR_BYTES,
     },
     tempSensor: {
       waterSpeed: Number(speed.toFixed(2)),
       waterFlow: flow,
       waterTemp: temp,
-      generationRate: Number(tempPackets.toFixed(2)),
+      generationRate: Number(tempRate.toFixed(1)),
+      bytesRate: Number(((tempRate * LOCAL_TEMP_SENSOR_BYTES) / 1000).toFixed(2)),
+      rawSensorBytes: LOCAL_TEMP_SENSOR_BYTES,
     },
     totalDemand,
+    demandKBS,
   };
 }
 
 export function createInitialState(numGateways: number = 3, mode: SimulationMode = 'optimized'): SimulationState {
   const lambda = DEFAULT_LAMBDA;
   const tau = Number((1 / lambda).toFixed(3));
-  const serverEpsilon = 60; // Default central server capacity (packets/sec)
+  const serverEpsilon = 60; // Default central server capacity in paq/s (60 * 119 B = ~7.14 kB/s)
 
   const gateways: GatewayNodeState[] = [];
   for (let i = 0; i < numGateways; i++) {
@@ -90,18 +105,22 @@ export function createInitialState(numGateways: number = 3, mode: SimulationMode
         speedSensor: telemetry.speedSensor,
         tempSensor: telemetry.tempSensor,
       },
-      buffer: 4.0,
+      buffer: 4.0, // in packets (~0.48 kB)
       bufferCapacity: GATEWAY_MAX_BUFFER,
       epsilon: 50.0,
       w: 1.0,
       u: 1.0,
       demand: telemetry.totalDemand,
+      demandKBS: telemetry.demandKBS,
       outflow: 0.0,
       spatialQ: new Array(SPATIAL_POINTS).fill(telemetry.totalDemand / numGateways),
       droppedPackets: 0,
       admittedPackets: 0,
+      bandwidthSavedKB: 0,
     });
   }
+
+  const serverEpsKBS = Number(((serverEpsilon * UNIFIED_PACKET_BYTES) / 1000).toFixed(2));
 
   return {
     time: 0,
@@ -113,19 +132,25 @@ export function createInitialState(numGateways: number = 3, mode: SimulationMode
     gateways,
     server: {
       buffer: 6.0,
+      bufferKB: Number(((6.0 * UNIFIED_PACKET_BYTES) / 1000).toFixed(2)),
       bufferCapacity: SERVER_MAX_BUFFER,
       epsilon: serverEpsilon,
+      epsilonKBS: serverEpsKBS,
       w: 1.0,
       inflow: 0,
+      inflowKBS: 0,
       processingRate: 0,
+      processingRateKBS: 0,
       zEquilibrium: 0,
       isEquilibriumFinite: true,
       totalAdmitted: 0,
       totalProcessed: 0,
       totalDropped: 0,
+      totalDroppedKB: 0,
       isBottleneck: false,
       cpuUtilization: 0,
       queueDelay: 0,
+      totalBandwidthSavingsPercent: BANDWIDTH_SAVING_PERCENT,
     },
     particles: [],
     history: [],
@@ -134,7 +159,7 @@ export function createInitialState(numGateways: number = 3, mode: SimulationMode
 
 /**
  * Non-linear processing rate function as derived in the documents:
- * r_i(z_i) = \frac{\epsilon_i \cdot z_i}{1 + z_i}
+ * r_i(z_i) = \frac{\epsilon_i \cdot z_i}{1 + z_i} [paq/s]
  */
 export function nonlinearProcessingRate(z: number, epsilon: number): number {
   if (z <= 0) return 0;
@@ -143,7 +168,7 @@ export function nonlinearProcessingRate(z: number, epsilon: number): number {
 
 /**
  * Algebraic equilibrium calculation from document section 9:
- * z^* = \frac{w \cdot d}{(1 - w \cdot u)\epsilon - w \cdot d}
+ * z^* = \frac{w \cdot d}{(1 - w \cdot u)\epsilon - w \cdot d} [paq]
  * Valid when w \cdot d < (1 - w \cdot u)\epsilon
  */
 export function calculateEquilibrium(
@@ -165,7 +190,7 @@ export function calculateEquilibrium(
 
   const zStar = (w * d) / denominator;
   return {
-    zStar: Math.max(0, Number(zStar.toFixed(3))),
+    zStar: Math.max(0, Number(zStar.toFixed(2))),
     isStable: 1,
     maxAdmissibleDemand,
   };
@@ -173,11 +198,6 @@ export function calculateEquilibrium(
 
 /**
  * Steps the simulation forward by dt (in seconds).
- * Solves:
- * 1. PDE for transmission line: \partial_t q + \lambda \partial_x q = 0
- * 2. ODE for Gateway buffers: dz_k/dt = w_k d_k - r_k(z_k)
- * 3. Coupling at boundary: q(t, 0) = u_k r_k(z_k)
- * 4. ODE for Central Server buffer: dz_serv/dt = w_serv \sum q_k(t, 1) - r_serv(z_serv)
  */
 export function stepSimulation(currentState: SimulationState, dt: number): SimulationState {
   const state: SimulationState = JSON.parse(JSON.stringify(currentState));
@@ -197,35 +217,42 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
       speedSensor: telemetry.speedSensor,
       tempSensor: telemetry.tempSensor,
     };
-    gw.demand = telemetry.totalDemand;
+    
+    // In unoptimized mode (if sensors don't consolidate through gateway),
+    // they send separate packets with 25% extra header overhead!
+    const effectiveDemand = mode === 'unoptimized' 
+      ? Number((telemetry.totalDemand * (SEPARATE_TX_BYTES / UNIFIED_PACKET_BYTES)).toFixed(1))
+      : telemetry.totalDemand;
+
+    gw.demand = effectiveDemand;
+    gw.demandKBS = Number(((effectiveDemand * UNIFIED_PACKET_BYTES) / 1000).toFixed(2));
     totalRawDemand += gw.demand;
+
+    // Track bandwidth saved in optimized mode (kB saved)
+    if (mode === 'optimized') {
+      const savedBytesPerSec = telemetry.totalDemand * (SEPARATE_TX_BYTES - UNIFIED_PACKET_BYTES);
+      gw.bandwidthSavedKB += (savedBytesPerSec * dt) / 1000;
+    }
   });
 
   // 2. Control Laws (Optimized vs Unoptimized)
-  // In unoptimized mode: w = 1.0 (no throttling, blind admission), u = 1.0 (static routing).
-  // In optimized mode: dynamic admission w(t) to prevent buffer overflow (ISS stability)
-  // and balanced routing u_k(t).
   let effectiveServerW = 1.0;
   if (mode === 'optimized') {
-    // Target buffer operating point (e.g. 20-30% of capacity to maintain high throughput and low delay)
     const targetBuffer = SERVER_MAX_BUFFER * 0.35;
     const currentBuf = state.server.buffer;
 
-    // ISS Closed-loop admission factor:
-    // If incoming flow would saturate server, dynamically throttle and aggregate at the gateway
+    // ISS Closed-loop admission factor
     const capacityHeadroom = Math.max(0.05, 1.0 - currentBuf / targetBuffer);
     const flowRatio = (epsilonServ * 0.92) / Math.max(0.1, totalRawDemand);
     const optimalW = Math.min(1.0, Math.max(0.12, flowRatio * Math.min(1.0, capacityHeadroom + 0.4)));
 
     state.gateways.forEach((gw) => {
-      // Dynamic admission factor per gateway
       gw.w = Number(optimalW.toFixed(3));
-      // Dynamic routing balance
       gw.u = Number((1.0 / state.gateways.length).toFixed(3));
     });
-    effectiveServerW = 1.0; // gateways already shaped flow
+    effectiveServerW = 1.0;
   } else {
-    // Unoptimized mode: w = 1.0, u = 1.0
+    // Unoptimized mode: w = 1.0, u = 1.0 (blind admission, no throttling)
     state.gateways.forEach((gw) => {
       gw.w = 1.0;
       gw.u = 1.0;
@@ -237,16 +264,11 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
   let totalArrivalAtServer = 0;
 
   state.gateways.forEach((gw, gIdx) => {
-    // Effective admitted demand
     const admittedDemand = gw.w * gw.demand;
     const nonAdmitted = gw.demand - admittedDemand;
 
     if (mode === 'unoptimized' && gw.buffer >= gw.bufferCapacity) {
-      // If buffer is saturated in unoptimized mode, dropped packets accumulate
       gw.droppedPackets += nonAdmitted * dt;
-    } else if (mode === 'optimized') {
-      // In optimized mode, nonAdmitted represents intelligent data compression/aggregation
-      // (zero loss of core telemetry metadata)
     }
     gw.admittedPackets += admittedDemand * dt;
 
@@ -270,14 +292,12 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
     // Boundary condition for PDE: q_k(t, 0) = u_k * r_k(z_k)
     const q_boundary = gw.u * gwProcessing;
 
-    // Upwind numerical scheme for PDE:
-    // \partial_t q + \lambda \partial_x q = 0
+    // Upwind numerical scheme for PDE: \partial_t q + \lambda \partial_x q = 0
     const oldQ = [...gw.spatialQ];
     const newQ = new Array(SPATIAL_POINTS).fill(0);
     newQ[0] = q_boundary;
 
     for (let m = 1; m < SPATIAL_POINTS; m++) {
-      // Upwind finite difference
       const advectionFlux = cfl * (oldQ[m] - oldQ[m - 1]);
       newQ[m] = Math.max(0, oldQ[m] - advectionFlux);
     }
@@ -288,31 +308,34 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
     const arrivalFromThisLine = newQ[SPATIAL_POINTS - 1];
     totalArrivalAtServer += arrivalFromThisLine;
 
-    // Particle animation generation
+    // Particle animation generation (visual representation of unified 119 B packets)
     if (Math.random() < Math.min(0.65, arrivalFromThisLine * 0.04)) {
       state.particles.push({
         id: Math.random(),
         gatewayIndex: gIdx,
         x: 0,
-        type: Math.random() > 0.5 ? 'speed' : 'temp',
-        size: Math.max(2, Math.min(6, 2 + arrivalFromThisLine * 0.1)),
+        type: 'unified',
+        size: Math.max(3, Math.min(6, 3 + (arrivalFromThisLine / 40) * 2)),
       });
     }
   });
 
-  // 4. Central Server ODE Step:
-  // dz_serv/dt = w_serv \sum q_ki(t, 1) - r_serv(z_serv)
-  state.server.inflow = Number(totalArrivalAtServer.toFixed(2));
+  // 4. Central Server ODE Step: dz_serv/dt = w_serv \sum q_ki(t, 1) - r_serv(z_serv)
+  state.server.inflow = Number(totalArrivalAtServer.toFixed(1));
+  state.server.inflowKBS = Number(((totalArrivalAtServer * UNIFIED_PACKET_BYTES) / 1000).toFixed(2));
   const admittedToServer = effectiveServerW * totalArrivalAtServer;
 
   // Server non-linear processing rate
   const rServer = nonlinearProcessingRate(state.server.buffer, epsilonServ);
-  state.server.processingRate = Number(rServer.toFixed(2));
+  state.server.processingRate = Number(rServer.toFixed(1));
+  state.server.processingRateKBS = Number(((rServer * UNIFIED_PACKET_BYTES) / 1000).toFixed(2));
   state.server.cpuUtilization = Math.min(100, Number(((rServer / epsilonServ) * 100).toFixed(1)));
+  state.server.epsilonKBS = Number(((epsilonServ * UNIFIED_PACKET_BYTES) / 1000).toFixed(2));
 
   // Balance ODE:
   const dz_serv = (admittedToServer - rServer) * dt;
   state.server.buffer = Math.max(0.01, state.server.buffer + dz_serv);
+  state.server.bufferKB = Number(((state.server.buffer * UNIFIED_PACKET_BYTES) / 1000).toFixed(2));
 
   // Buffer Overflow / Bottleneck logic
   const isOverflow = state.server.buffer >= state.server.bufferCapacity;
@@ -321,17 +344,18 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
   if (isOverflow) {
     droppedThisStep = (state.server.buffer - state.server.bufferCapacity);
     state.server.buffer = state.server.bufferCapacity;
+    state.server.bufferKB = Number(((SERVER_MAX_BUFFER * UNIFIED_PACKET_BYTES) / 1000).toFixed(2));
     state.server.totalDropped += droppedThisStep;
+    state.server.totalDroppedKB = Number(((state.server.totalDropped * UNIFIED_PACKET_BYTES) / 1000).toFixed(1));
     state.server.isBottleneck = true;
   } else {
-    // Bottleneck detected if buffer is dangerously filling above 80% with arrival > processing
     state.server.isBottleneck = state.server.buffer > state.server.bufferCapacity * 0.8 && admittedToServer > rServer;
   }
 
   state.server.totalAdmitted += admittedToServer * dt;
   state.server.totalProcessed += rServer * dt;
 
-  // Compute theoretical equilibrium for reference
+  // Theoretical equilibrium in packets
   const avgW = state.gateways.reduce((acc, g) => acc + g.w, 0) / state.gateways.length;
   const avgU = state.gateways.reduce((acc, g) => acc + g.u, 0) / state.gateways.length;
   const eq = calculateEquilibrium(avgW, avgU, totalArrivalAtServer, epsilonServ);
@@ -345,20 +369,23 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
   state.particles = state.particles
     .map((p) => ({
       ...p,
-      x: p.x + lambda * dt * 0.45, // scale for visual smoothness
+      x: p.x + lambda * dt * 0.45,
     }))
     .filter((p) => p.x <= 1.0);
 
-  // 6. Record History for Graphs (keep last 60 points)
+  // 6. Record History for Graphs
   if (state.history.length === 0 || state.time - state.history[state.history.length - 1].time >= 0.25) {
     state.history.push({
       time: Number(state.time.toFixed(1)),
-      buffer: Number(state.server.buffer.toFixed(2)),
-      zEquilibrium: Number.isFinite(eq.zStar) ? Number(eq.zStar.toFixed(2)) : SERVER_MAX_BUFFER * 1.2,
-      inflow: Number(totalArrivalAtServer.toFixed(2)),
-      processingRate: Number(rServer.toFixed(2)),
-      droppedRate: Number((droppedThisStep / dt).toFixed(2)),
-      totalDemand: Number(totalRawDemand.toFixed(2)),
+      buffer: Number(state.server.buffer.toFixed(1)),
+      bufferKB: Number(((state.server.buffer * UNIFIED_PACKET_BYTES) / 1000).toFixed(2)),
+      zEquilibrium: Number.isFinite(eq.zStar) ? Number(eq.zStar.toFixed(1)) : SERVER_MAX_BUFFER * 1.2,
+      inflow: Number(totalArrivalAtServer.toFixed(1)),
+      inflowKBS: Number(((totalArrivalAtServer * UNIFIED_PACKET_BYTES) / 1000).toFixed(2)),
+      processingRate: Number(rServer.toFixed(1)),
+      processingRateKBS: Number(((rServer * UNIFIED_PACKET_BYTES) / 1000).toFixed(2)),
+      droppedRate: Number((droppedThisStep / dt).toFixed(1)),
+      totalDemand: Number(totalRawDemand.toFixed(1)),
       isBottleneck: state.server.isBottleneck,
     });
 

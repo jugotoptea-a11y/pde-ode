@@ -73,7 +73,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.fillStyle = '#ef4444';
         ctx.font = '10px monospace';
         ctx.textAlign = 'right';
-        ctx.fillText(`Límite Físico Z_max (${SERVER_MAX_BUFFER})`, width - padding.right, zMaxY - 4);
+        ctx.fillText(`Límite Físico Z_max (${SERVER_MAX_BUFFER} paq / ${(SERVER_MAX_BUFFER * 0.119).toFixed(1)} kB)`, width - padding.right, zMaxY - 4);
 
         // Draw z* Equilibrium Line (Cyan Dashed) if finite
         if (state.server.isEquilibriumFinite && state.server.zEquilibrium < maxBufferY) {
@@ -90,7 +90,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
           ctx.fillStyle = '#38bdf8';
           ctx.font = '10px monospace';
           ctx.textAlign = 'left';
-          ctx.fillText(`Equilibrio Teórico z* (${state.server.zEquilibrium.toFixed(1)})`, padding.left + 8, zStarY - 4);
+          ctx.fillText(`Equilibrio Teórico z* (${state.server.zEquilibrium.toFixed(1)} paq / ${(state.server.zEquilibrium * 0.119).toFixed(1)} kB)`, padding.left + 8, zStarY - 4);
         }
 
         // Draw Buffer Trajectory
@@ -131,7 +131,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
         ctx.font = '10px monospace';
         ctx.textAlign = 'right';
-        ctx.fillText(`${SERVER_MAX_BUFFER}`, padding.left - 8, zMaxY + 3);
+        ctx.fillText(`${SERVER_MAX_BUFFER} paq`, padding.left - 8, zMaxY + 3);
         ctx.fillText(`${Math.round(SERVER_MAX_BUFFER / 2)}`, padding.left - 8, padding.top + plotH / 2 + 3);
         ctx.fillText('0', padding.left - 8, height - padding.bottom + 3);
 
@@ -139,7 +139,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.textAlign = 'left';
         ctx.fillStyle = '#f8fafc';
         ctx.font = 'bold 11px sans-serif';
-        ctx.fillText('Evolución del Búfer del Servidor z(t) vs Capacidad y Equilibrio', padding.left, 18);
+        ctx.fillText('Evolución del Búfer del Servidor z(t) [paquetes & kB] vs Capacidad y Equilibrio', padding.left, 18);
 
       } else if (activeTab === 'rates') {
         // TAB 2: Traffic Rates (Inflow vs Processed Rate vs Dropped Rate)
@@ -197,20 +197,20 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.fillStyle = '#a855f7';
         ctx.font = '10px monospace';
         ctx.textAlign = 'right';
-        ctx.fillText(`Capacidad Máx ε = ${state.server.epsilon}`, width - padding.right, epsY - 4);
+        ctx.fillText(`Capacidad Máx ε = ${state.server.epsilon} paq/s (${state.server.epsilonKBS} kB/s)`, width - padding.right, epsY - 4);
 
         // Y-axis labels
         ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
         ctx.font = '10px monospace';
         ctx.textAlign = 'right';
-        ctx.fillText(`${Math.round(maxRateY)}`, padding.left - 8, padding.top + 8);
+        ctx.fillText(`${Math.round(maxRateY)} paq/s`, padding.left - 8, padding.top + 8);
         ctx.fillText('0', padding.left - 8, height - padding.bottom + 3);
 
         // Title and Legend
         ctx.textAlign = 'left';
         ctx.fillStyle = '#f8fafc';
         ctx.font = 'bold 11px sans-serif';
-        ctx.fillText('Flujos de Tráfico: Entrada q(1), Servicio r(z) y Pérdida', padding.left, 18);
+        ctx.fillText('Flujos de Tráfico: Entrada q(1), Servicio r(z) y Pérdida [paq/s & kB/s]', padding.left, 18);
 
         ctx.fillStyle = '#38bdf8';
         ctx.fillText('— Entrada q(1)', padding.left + 320, 18);
@@ -239,7 +239,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.fillStyle = '#fbbf24';
         ctx.font = '10px monospace';
         ctx.textAlign = 'right';
-        ctx.fillText(`Asíntota de Saturación ε = ${eps} paq/s`, width - padding.right, epsY - 5);
+        ctx.fillText(`Asíntota de Saturación ε = ${eps} paq/s (${state.server.epsilonKBS} kB/s)`, width - padding.right, epsY - 5);
 
         // Draw theoretical r(z) curve
         ctx.beginPath();
@@ -274,7 +274,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.fillStyle = '#f8fafc';
         ctx.font = 'bold 10px monospace';
         ctx.textAlign = 'left';
-        ctx.fillText(`Punto Actual: z=${currentZ.toFixed(1)}, r=${currentR.toFixed(1)}`, curX + 10, curY - 5);
+        ctx.fillText(`Punto Actual: z=${currentZ.toFixed(1)} paq (${(currentZ * 0.119).toFixed(1)} kB), r=${currentR.toFixed(1)} paq/s`, curX + 10, curY - 5);
 
         // Axis labels
         ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
