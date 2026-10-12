@@ -44,7 +44,7 @@ export function EnvironmentalControls({
         <div className="flex items-center gap-1.5 flex-wrap self-end md:self-auto">
           <span className="text-xs text-slate-400 mr-1 flex items-center gap-1">
             <Layers className="w-3.5 h-3.5 text-slate-400" />
-            <span>Escenarios Cuenca:</span>
+            <span>Escenarios:</span>
           </span>
           <button
             onClick={() => onApplyPreset('dry')}
@@ -78,15 +78,14 @@ export function EnvironmentalControls({
       </div>
 
       {/* Grid of Individual Gateway Cards (Side-by-Side) */}
-      <div className={`grid gap-4 ${
-        gateways.length === 1
-          ? 'grid-cols-1'
-          : gateways.length === 2
+      <div className={`grid gap-4 ${gateways.length === 1
+        ? 'grid-cols-1'
+        : gateways.length === 2
           ? 'grid-cols-1 md:grid-cols-2'
           : gateways.length === 3
-          ? 'grid-cols-1 md:grid-cols-3'
-          : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
-      }`}>
+            ? 'grid-cols-1 md:grid-cols-3'
+            : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+        }`}>
         {gateways.map((gw, idx) => {
           const env = gw.environment;
           const isSelected = selectedGatewayIndex === idx;
@@ -95,11 +94,10 @@ export function EnvironmentalControls({
             <div
               key={gw.id}
               onClick={() => onSelectGateway(idx)}
-              className={`p-3.5 rounded-xl border flex flex-col gap-3.5 transition-all ${
-                isSelected
-                  ? 'bg-slate-950 border-sky-500/80 ring-1 ring-sky-500/30 shadow-lg'
-                  : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
-              }`}
+              className={`p-3.5 rounded-xl border flex flex-col gap-3.5 transition-all ${isSelected
+                ? 'bg-slate-950 border-sky-500/80 ring-1 ring-sky-500/30 shadow-lg'
+                : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
+                }`}
             >
               {/* Card Header */}
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
@@ -107,7 +105,7 @@ export function EnvironmentalControls({
                   <span className={`w-2.5 h-2.5 rounded-full ${isSelected ? 'bg-sky-400 animate-pulse' : 'bg-slate-500'}`} />
                   <div>
                     <h4 className="text-xs font-bold text-slate-100">{gw.name}</h4>
-                    <span className="text-[10px] text-slate-400 block truncate max-w-[160px]">{gw.location}</span>
+                    <span className="text-[10px] text-slate-400 block truncate max-w-40">{gw.location}</span>
                   </div>
                 </div>
 

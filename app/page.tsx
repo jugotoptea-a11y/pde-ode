@@ -294,7 +294,7 @@ export default function Home() {
         <PerformanceMetrics state={state} />
 
         {/* Interactive Visual Network Canvas */}
-        <div className="w-full h-[400px] lg:h-[460px]">
+        <div className="w-full h-100 lg:h-115">
           <NetworkCanvas
             state={state}
             selectedGatewayIndex={selectedGatewayIndex}

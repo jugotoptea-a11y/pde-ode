@@ -253,9 +253,6 @@ export function MathematicalReference() {
               <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
                 <span>🛡️ 6. Arquitectura IoT: Gateway Intermediario, Paquetes de ~119 Bytes y Ahorro del 25%</span>
               </h4>
-              <span className="text-[10px] bg-emerald-950 px-2 py-0.5 rounded text-emerald-300 border border-emerald-800 font-mono">
-                Telemetría Ligera: ~119 B &lt;&lt; 1 MB
-              </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
