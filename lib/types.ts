@@ -3,25 +3,25 @@ export type SimulationMode = 'unoptimized' | 'optimized';
 export type WeatherPreset = 'dry' | 'moderate' | 'torrential' | 'extreme_flood';
 
 export interface EnvironmentalState {
-  rainIntensity: number; // mm/h [0 - 180]
-  waterSpeed: number;    // m/s [0.2 - 12.0]
-  waterTemp: number;     // °C [18 - 45]
+  rain_mm: number;      // Precipitación [0.8 - 180.0 mm]
+  flowIndex: number;    // Índice [0 - 59] en tabla empírica de 60 pares (Caudal, Velocidad)
+  waterFlow: number;    // Caudal Q [12 - 208 m³/s]
+  waterSpeed: number;   // Velocidad v [3.7 - 10.4 m/s]
 }
 
 export interface SensorTelemetry {
-  waterSpeed: number;    // m/s
-  waterFlow: number;     // m³/s (speed * cross-section)
-  waterTemp: number;     // °C
+  name: string;
+  reading: string;
   generationRate: number; // Packets/sec generated
   bytesRate: number;      // kB/s generated
-  rawSensorBytes: number; // ~20 bytes per reading
+  rawBytes: number;       // ~20 bytes per reading
 }
 
 export interface PacketParticle {
   id: number;
   gatewayIndex: number;
   x: number; // Normalized position [0, 1]
-  type: 'speed' | 'temp' | 'unified';
+  type: 'rain' | 'water' | 'unified';
   size: number;
 }
 
@@ -31,8 +31,8 @@ export interface GatewayNodeState {
   location: string;
   environment: EnvironmentalState;
   sensors: {
-    speedSensor: SensorTelemetry;
-    tempSensor: SensorTelemetry;
+    rainSensor: SensorTelemetry;  // Pluviómetro
+    waterSensor: SensorTelemetry; // Sensor de Agua (Caudal Q y Velocidad v acoplados)
   };
   buffer: number;          // z_k(t) in packets (each ~119 B)
   bufferCapacity: number;  // Z_max in packets (e.g. 80 paq = ~9.5 kB)

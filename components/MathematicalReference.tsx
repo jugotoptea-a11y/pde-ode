@@ -1,302 +1,470 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { MathBlock } from './MathBlock';
-import { BookOpen, ChevronDown, ChevronUp, GraduationCap, Cpu, Waves, Table } from 'lucide-react';
+import { GraduationCap, Table, Waves, Cpu, BookOpen, ShieldCheck, CloudRain } from 'lucide-react';
 
 export function MathematicalReference() {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-      {/* Accordion Toggle Header */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-5 py-3.5 flex items-center justify-between bg-slate-900 hover:bg-slate-800/80 transition-colors text-left cursor-pointer"
-      >
+    <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-xl flex flex-col gap-6 text-sm text-slate-300">
+      {/* Institutional Header Banner */}
+      <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-indigo-950 text-indigo-400 border border-indigo-800/60">
             <GraduationCap className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-              <span>Fundamentación Teórica, Unidades y Formulación Matemática PDE–ODE</span>
-              <span className="text-xs font-normal text-indigo-400 bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-800/50">
-                CUC CIA 2026-2
-              </span>
-            </h3>
-            <p className="text-xs text-slate-400">
-              Desarrollo analítico según el proyecto &quot;Cero DesBorde&quot; (Espitia, Girard, Marchand y Prieur)
+            <div className="text-xs text-indigo-400 font-semibold tracking-wider uppercase">
+              Componente Integrador de Aprendizaje (CIA) • Ecuaciones Diferenciales
+            </div>
+            <div className="text-sm font-bold text-slate-100 mt-0.5">
+              Fundamentación Teórica, Variables y Formulación Matemática Completa PDE–ODE
+            </div>
+            <div className="text-xs text-slate-400 mt-1">
+              Desarrollo analítico de Espitia, Girard, Marchand y Prieur • Universidad de la Costa (CUC)
+            </div>
+          </div>
+        </div>
+        <div className="px-3 py-1.5 rounded-lg bg-indigo-950/70 border border-indigo-700/50 text-indigo-300 text-xs font-mono self-start sm:self-center">
+          Grupo 24382
+        </div>
+      </div>
+
+      {/* Section 1: Complete Table of Variables and Parameters from the PDF Document */}
+      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-3">
+        <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+          <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
+            <Table className="w-4 h-4" />
+            <span>1. Tabla Exhaustiva de Variables y Parámetros del Modelo (Documento PDF)</span>
+          </div>
+          <span className="text-[11px] font-mono text-slate-400">
+            19 variables y parámetros formalmente tipificados
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-800 text-slate-400">
+                <th className="py-2.5 px-3 font-semibold">Variable / Parámetro</th>
+                <th className="py-2.5 px-3 font-semibold">Definición Matemática y Significado Físico</th>
+                <th className="py-2.5 px-3 font-semibold">Unidad Documento</th>
+                <th className="py-2.5 px-3 font-semibold">Equivalencia en Simulación</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/70 text-xs">
+              {/* 1. t */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="t" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Tiempo continuo de operación del sistema de telemetría y drenaje.
+                </td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Segundos [s]</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">s</td>
+              </tr>
+
+              {/* 2. x */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="x \in [0, 1]" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Posición espacial normalizada a lo largo del canal de transmisión (<MathBlock math="x=0" /> emisor, <MathBlock math="x=1" /> receptor).
+                </td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Adimensional [0, 1]</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">Canal Gateway k → Servidor</td>
+              </tr>
+
+              {/* 3. q_ij(t, x) */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="q_{ij}(t, x)" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Densidad o magnitud de tráfico de datos en tránsito por la línea que conecta el nodo <MathBlock math="i" /> con el nodo <MathBlock math="j" />.
+                </td>
+                <td className="py-2.5 px-3 font-mono text-emerald-400 font-semibold">Megabits [Mb]</td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Paquetes en vuelo / longitud</td>
+              </tr>
+
+              {/* 4. \lambda_ij */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="\lambda_{ij} > 0" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Velocidad efectiva de propagación del tráfico de datos en la coordenada espacial normalizada.
+                </td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">s⁻¹</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">1 / s (λ = 1.8)</td>
+              </tr>
+
+              {/* 5. z_i(t) */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="z_i(t)" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Cantidad de datos acumulados en el búfer lógico de almacenamiento del nodo <MathBlock math="i" />.
+                </td>
+                <td className="py-2.5 px-3 font-mono text-emerald-400 font-semibold">Megabits [Mb]</td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Paquetes (~119 B c/u)</td>
+              </tr>
+
+              {/* 6. d_i(t) */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="d_i(t)" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Demanda externa que llega al nodo <MathBlock math="i" /> generada por los sensores de campo (pluviómetro y sensor de agua).
+                </td>
+                <td className="py-2.5 px-3 font-mono text-amber-400 font-semibold">Megabits/segundo [Mb/s]</td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Paquetes/s y kB/s</td>
+              </tr>
+
+              {/* 7. w_i(t) */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="w_i(t) \in [0, 1]" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Factor dinámico de admisión del tráfico en el nodo <MathBlock math="i" /> (mecanismo de regulación preventiva de descarte).
+                </td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Adimensional [0, 1]</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">Control ISS (0.12 a 1.0)</td>
+              </tr>
+
+              {/* 8. u_ij(t) */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="u_{ij}(t) \in [0, 1]" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Fracción de enrutamiento del tráfico procesado por el nodo <MathBlock math="i" /> que se dirige hacia la línea del nodo <MathBlock math="j" />.
+                </td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Adimensional [0, 1]</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">Reparto de tráfico (1/N)</td>
+              </tr>
+
+              {/* 9. r_i(z_i) */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="r_i(z_i)" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Tasa no lineal de procesamiento o salida de datos del nodo <MathBlock math="i" /> hacia el canal o consumidor.
+                </td>
+                <td className="py-2.5 px-3 font-mono text-purple-400 font-semibold">Megabits/segundo [Mb/s]</td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Paquetes/s y kB/s</td>
+              </tr>
+
+              {/* 10. \varepsilon_i */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="\varepsilon_i > 0" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Capacidad límite o asintótica máxima de procesamiento computacional del nodo/servidor.
+                </td>
+                <td className="py-2.5 px-3 font-mono text-purple-400 font-semibold">Mb/s</td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Límite ε (15 a 180 paq/s)</td>
+              </tr>
+
+              {/* 11. \tau_ij */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="\tau_{ij} = \frac{1}{\lambda_{ij}}" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Tiempo de retardo físico de transporte por la línea cuando <MathBlock math="x" /> está normalizada entre 0 y 1.
+                </td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Segundos [s]</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">τ = 0.556 s</td>
+              </tr>
+
+              {/* 12. \theta_i(z_i) */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="\theta_i(z_i) = \frac{1 + z_i}{\varepsilon_i}" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Tiempo medio de residencia o permanencia de los datos en el búfer del nodo <MathBlock math="i" />.
+                </td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Segundos [s]</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">s</td>
+              </tr>
+
+              {/* 13. \mathcal{U}_i */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="\mathcal{U}_i" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Conjunto de nodos emisores conectados que transmiten tráfico hacia el nodo receptor <MathBlock math="i" />.
+                </td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Conjunto topológico</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">&#123;GW₁, GW₂, GW₃&#125;</td>
+              </tr>
+
+              {/* 14. q_ij^0(x) */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="q_{ij}^0(x)" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Perfil o distribución inicial de tráfico presente en la línea antes del arribo de la condición de frontera (<MathBlock math="t < x/\lambda_{ij}" />).
+                </td>
+                <td className="py-2.5 px-3 font-mono text-emerald-400 font-semibold">Megabits [Mb]</td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Condición inicial PDE</td>
+              </tr>
+
+              {/* 15. t_0 */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="t_0 = t - \frac{x}{\lambda_{ij}}" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Instante temporal en que la característica salió de la frontera emisora <MathBlock math="x = 0" />.
+                </td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Segundos [s]</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">s</td>
+              </tr>
+
+              {/* 16. z^* */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="z^*" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Punto de equilibrio analítico algebraico del búfer en régimen estacionario (<MathBlock math="dz/dt = 0" />).
+                </td>
+                <td className="py-2.5 px-3 font-mono text-emerald-400 font-semibold">Megabits [Mb]</td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Paquetes en equilibrio</td>
+              </tr>
+
+              {/* 17. z_0 */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="z_0" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Cantidad o escala de referencia del búfer que normaliza la expresión para consistencia dimensional: <MathBlock math="r(z) = \varepsilon \frac{z/z_0}{1 + z/z_0}" />.
+                </td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Unidades de búfer</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">1 paq (normalizado)</td>
+              </tr>
+
+              {/* 18. L y v */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="L, \ v" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Longitud física del canal y velocidad física real de transmisión de datos en el enlace (<MathBlock math="\tau = L/v" />).
+                </td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Metros [m] y [m/s]</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">Fibra / enlace IP</td>
+              </tr>
+
+              {/* 19. r'_i(z_i) */}
+              <tr className="hover:bg-slate-900/60 transition-colors">
+                <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
+                  <MathBlock math="r_i'(z_i) = \frac{\varepsilon_i}{(1 + z_i)^2}" />
+                </td>
+                <td className="py-2.5 px-3 font-sans text-slate-300">
+                  Derivada marginal de la tasa de procesamiento; estrictamente positiva y decreciente (rendimientos marginales decrecientes).
+                </td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">s⁻¹</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">Aceleración de servicio</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Section 2: Mathematical Derivations & Differential Equations */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Box 1: PDE Transport */}
+        <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-sky-400 font-semibold text-xs">
+            <Waves className="w-4 h-4" />
+            <span>2. PDE: Dinámica del Tránsito (Ecuación de Advección)</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Transporte continuo del tráfico a lo largo de la línea normalizada <MathBlock math="x \in [0, 1]" /> (Ecuación 1 del PDF):
+          </p>
+          <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
+            <MathBlock math="\frac{\partial q_{ij}(t, x)}{\partial t} + \lambda_{ij} \frac{\partial q_{ij}(t, x)}{\partial x} = 0" block />
+          </div>
+          <p className="text-xs text-slate-400">
+            Por el <strong>método de las características</strong>, <MathBlock math="x(t) - \lambda t = C" />. En la salida de la línea (<MathBlock math="x = 1" />):
+          </p>
+          <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 text-center font-mono text-xs text-sky-300">
+            <MathBlock math="\tau_{ij} = \frac{1}{\lambda_{ij}}, \quad q_{ij}(t, 1) = u_{ij}(t - \tau_{ij}) r_i(z_i(t - \tau_{ij})), \quad t \ge \tau_{ij}" />
+          </div>
+        </div>
+
+        {/* Box 2: ODE Buffer Balance */}
+        <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-purple-400 font-semibold text-xs">
+            <Cpu className="w-4 h-4" />
+            <span>3. ODE: Balance de Masa en el Búfer (Ecuación 14 del PDF)</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            La acumulación temporal de datos <MathBlock math="z_i(t)" /> resulta de la demanda admitida más los flujos entrantes de otros nodos menos la tasa de procesamiento:
+          </p>
+          <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
+            <MathBlock math="\frac{dz_i(t)}{dt} = w_i(t) d_i(t) + \sum_{k \in \mathcal{U}_i} w_i(t) q_{ki}(t, 1) - r_i(z_i(t))" block />
+          </div>
+          <p className="text-xs text-slate-400">
+            Donde <MathBlock math="w_i \in [0, 1]" /> regula la admisión para prevenir cuellos de botella e inestabilidades de desborde.
+          </p>
+        </div>
+
+        {/* Box 3: Non-linear Processing Function */}
+        <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs">
+            <BookOpen className="w-4 h-4" />
+            <span>4. Función No Lineal de Procesamiento (Ecuaciones 15–18)</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Con un tiempo medio de residencia <MathBlock math="\theta_i(z_i) = \frac{1 + z_i}{\varepsilon_i}" />, la tasa de servicio es <MathBlock math="r_i(z_i) = \frac{z_i}{\theta_i(z_i)}" />:
+          </p>
+          <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
+            <MathBlock math="r_i(z_i) = \frac{\varepsilon_i z_i}{1 + z_i}" block />
+          </div>
+          <p className="text-xs text-slate-400">
+            Cumple <MathBlock math="r_i(0) = 0" /> y asíntota límite <MathBlock math="\lim_{z_i \to \infty} r_i(z_i) = \varepsilon_i" />. Derivada decreciente: <MathBlock math="r_i'(z_i) = \frac{\varepsilon_i}{(1 + z_i)^2} > 0" />.
+          </p>
+        </div>
+
+        {/* Box 4: Algebraic Equilibrium & Proof */}
+        <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
+            <GraduationCap className="w-4 h-4" />
+            <span className="flex items-center gap-1">5. Cálculo Algebraico del Equilibrio <MathBlock math="z^*" /> y Condición ISS (Sec. 9)</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            En régimen estacionario (<MathBlock math="dz/dt = 0" /> y <MathBlock math="z(t-\tau) = z^*" />), agrupando términos y despejando:
+          </p>
+          <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
+            <MathBlock math="z^* = \frac{w \cdot d}{(1 - w \cdot u)\varepsilon - w \cdot d}" block />
+          </div>
+          <p className="text-xs text-slate-400">
+            <strong>Condición analítica de no-desborde y equilibrio finito:</strong>
+          </p>
+          <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 text-center text-xs text-emerald-400 font-mono font-bold">
+            <MathBlock math="w \cdot d < (1 - w \cdot u)\varepsilon" />
+          </div>
+        </div>
+      </div>
+
+      {/* Section 3: Illustrative Numerical Example from PDF Section 10 */}
+      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-3">
+        <div className="flex items-center gap-2 text-sky-400 font-bold text-xs uppercase tracking-wider">
+          <BookOpen className="w-4 h-4" />
+          <span>6. Ejemplo Numérico Ilustrativo del Documento (PDF Sección 10)</span>
+        </div>
+        <p className="text-xs text-slate-400">
+          Con los parámetros ilustrativos del documento: <MathBlock math="w = 0.8, \ u = 0.5, \ d = 10, \ \varepsilon = 20" />:
+        </p>
+        <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 text-center font-mono text-xs text-sky-300 overflow-x-auto">
+          <MathBlock math="z^* = \frac{0.8 \times 10}{(1 - 0.8 \times 0.5) \times 20 - 0.8 \times 10} = \frac{8}{(1 - 0.4) \times 20 - 8} = \frac{8}{12 - 8} = \frac{8}{4} = 2" block />
+        </div>
+        <p className="text-xs text-slate-400">
+          El equilibrio teórico calculado es exactamente <MathBlock math="z^* = 2" /> unidades de estado del búfer.
+        </p>
+      </div>
+
+      {/* Section 4: Sensor Telemetry & IoT Architecture */}
+      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-3">
+        <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+          <CloudRain className="w-4 h-4 text-sky-400" />
+          <span>7. Reestructuración de Sensores: Pluviómetro y Sensor de Agua (Q y v acoplados)</span>
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800">
+            <span className="font-bold text-sky-300 block mb-1">
+              Pluviómetro (Precipitación Acumulada):
+            </span>
+            <p className="text-slate-300 leading-relaxed">
+              Basado en el <strong>rango histórico de referencia pluviométrica</strong> (desde 0.8 mm en estiaje seco hasta 160.5 mm en el pico de precipitación acumulada, extensible a 180 mm en eventos extremos de tormenta).
+            </p>
+            <div className="bg-slate-950 p-2 rounded text-center my-2 font-mono text-sky-400 border border-slate-800">
+              <MathBlock math="d_{\text{pluv}}(P) = 3.0 + 0.28 \cdot P \quad [\text{paq/s}]" />
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Cada lectura física local pesa ~20 Bytes.
+            </p>
+          </div>
+
+          <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800">
+            <span className="font-bold text-teal-300 block mb-1">
+              Sensor de Agua (Caudal Q y Velocidad v Acoplados):
+            </span>
+            <p className="text-slate-300 leading-relaxed">
+              Mide simultáneamente el caudal estimado <MathBlock math="Q \text{ [m}^3\text{/s]}" /> y la velocidad estimada <MathBlock math="v \text{ [m/s]}" /> acoplados según la tabla de 60 mediciones empíricas de campo (rango de <MathBlock math="12\text{ m}^3\text{/s}, 3.7\text{ m/s}" /> hasta <MathBlock math="208\text{ m}^3\text{/s}, 10.4\text{ m/s}" />).
+            </p>
+            <div className="bg-slate-950 p-2 rounded text-center my-2 font-mono text-teal-400 border border-slate-800">
+              <MathBlock math="d_{\text{water}}(Q, v) = 3.5 + 0.18 \cdot Q + 2.2 \cdot (v - 3.5) \quad [\text{paq/s}]" />
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Ambas variables viajan juntas localmente en una única lectura de ~20 Bytes.
             </p>
           </div>
         </div>
+      </div>
 
-        <div className="flex items-center gap-2 text-slate-400">
-          <span className="text-xs font-medium">{isOpen ? 'Ocultar Ecuaciones y Unidades' : 'Ver Ecuaciones y Unidades'}</span>
-          {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </div>
-      </button>
+      {/* Section 5: IoT Gateway Consolidation & Bandwidth Savings */}
+      <div className="p-4 rounded-xl bg-slate-950/90 border border-emerald-900/60 flex flex-col gap-3">
+        <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          <span>8. Arquitectura IoT: Consolidación en Gateway, Paquete de ~119 Bytes y Ahorro del 25%</span>
+        </h4>
 
-      {/* Accordion Content */}
-      {isOpen && (
-        <div className="p-5 border-t border-slate-800 bg-slate-950/70 flex flex-col gap-6 text-sm text-slate-300">
-          {/* Institutional Header */}
-          <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <div className="text-xs text-slate-400 font-semibold tracking-wider uppercase">
-                Componente Integrador de Aprendizaje (CIA) • Ecuaciones Diferenciales
-              </div>
-              <div className="text-sm font-bold text-slate-100 mt-0.5">
-                Optimización de Estación Inteligente de Bombeo para Control de Inundaciones en Barranquilla
-              </div>
-              <div className="text-xs text-slate-400 mt-1">
-                Autores: Gabriel Arenas, Sebastián Barrins, Jesús Estrada, Leandro Mendoza • Universidad de la Costa (CUC)
-              </div>
-            </div>
-            <div className="px-3 py-1.5 rounded-lg bg-indigo-950/70 border border-indigo-700/50 text-indigo-300 text-xs font-mono">
-              Grupo 24382
-            </div>
-          </div>
-
-          {/* Section: Technical Variables and Units */}
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
-              <Table className="w-4 h-4" />
-              <span>Variables Técnicas y Análisis Dimensional Consistente</span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-400">
-                    <th className="py-2 px-3 font-semibold">Variable</th>
-                    <th className="py-2 px-3 font-semibold">Definición Física / Matemática</th>
-                    <th className="py-2 px-3 font-semibold">Unidad Infografía</th>
-                    <th className="py-2 px-3 font-semibold">Equivalencia en Cola</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
-                  <tr>
-                    <td className="py-2 px-3 text-sky-400 font-bold">t</td>
-                    <td className="py-2 px-3 font-sans text-slate-300">Tiempo de operación del sistema</td>
-                    <td className="py-2 px-3 text-slate-200">Segundos [s]</td>
-                    <td className="py-2 px-3 text-slate-400">s</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-3 text-sky-400 font-bold">x</td>
-                    <td className="py-2 px-3 font-sans text-slate-300">Posición espacial normalizada en la línea</td>
-                    <td className="py-2 px-3 text-slate-200">Adimensional [0, 1]</td>
-                    <td className="py-2 px-3 text-slate-400">Canal i → j</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-3 text-sky-400 font-bold">z_i(t)</td>
-                    <td className="py-2 px-3 font-sans text-slate-300">Contenido acumulado en el búfer lógico del nodo o servidor</td>
-                    <td className="py-2 px-3 text-emerald-400 font-bold">Megabits [Mb]</td>
-                    <td className="py-2 px-3 text-slate-400">Paquetes normalizados</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-3 text-sky-400 font-bold">q_ij(t, x)</td>
-                    <td className="py-2 px-3 font-sans text-slate-300">Densidad de datos en tránsito por la línea de comunicación</td>
-                    <td className="py-2 px-3 text-emerald-400 font-bold">Megabits [Mb]</td>
-                    <td className="py-2 px-3 text-slate-400">Paquetes / longitud</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-3 text-sky-400 font-bold">d_i(t)</td>
-                    <td className="py-2 px-3 font-sans text-slate-300">Demanda externa generada por sensores (caudal y temperatura)</td>
-                    <td className="py-2 px-3 text-amber-400 font-bold">Megabits/segundo [Mb/s]</td>
-                    <td className="py-2 px-3 text-slate-400">Paquetes/segundo</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-3 text-sky-400 font-bold">r_i(z_i)</td>
-                    <td className="py-2 px-3 font-sans text-slate-300">Tasa de salida o procesamiento del nodo/servidor</td>
-                    <td className="py-2 px-3 text-purple-400 font-bold">Megabits/segundo [Mb/s]</td>
-                    <td className="py-2 px-3 text-slate-400">Paquetes/segundo</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-3 text-sky-400 font-bold">ε_i</td>
-                    <td className="py-2 px-3 font-sans text-slate-300">Capacidad máxima asintótica de procesamiento del servidor</td>
-                    <td className="py-2 px-3 text-purple-400 font-bold">Mb/s</td>
-                    <td className="py-2 px-3 text-slate-400">Paquetes/segundo máx</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-3 text-sky-400 font-bold">λ_ij</td>
-                    <td className="py-2 px-3 font-sans text-slate-300">Velocidad efectiva de propagación en la coordenada normalizada</td>
-                    <td className="py-2 px-3 text-slate-200">s⁻¹</td>
-                    <td className="py-2 px-3 text-slate-400">1 / s</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-3 text-sky-400 font-bold">τ_ij = 1/λ_ij</td>
-                    <td className="py-2 px-3 font-sans text-slate-300">Retardo de transporte físico por la línea (x = 1)</td>
-                    <td className="py-2 px-3 text-slate-200">Segundos [s]</td>
-                    <td className="py-2 px-3 text-slate-400">s</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Grid of Formulas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Box 1: PDE Transport */}
-            <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-sky-400 font-semibold text-xs">
-                <Waves className="w-4 h-4" />
-                <span>1. PDE: Dinámica del Tránsito (Línea de Transmisión)</span>
-              </div>
-              <p className="text-xs text-slate-400">
-                Modela el desplazamiento advectivo continuo de paquetes de datos a lo largo de la línea normalizada <MathBlock math="x \in [0, 1]" />:
-              </p>
-              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
-                <MathBlock math="\frac{\partial q_{ij}(t, x)}{\partial t} + \lambda_{ij} \frac{\partial q_{ij}(t, x)}{\partial x} = 0" block />
-              </div>
-              <p className="text-xs text-slate-400">
-                Por el <strong>método de las características</strong>, <MathBlock math="x(t) - \lambda t = C" />. El retardo de transporte a la llegada (<MathBlock math="x=1" />) es:
-              </p>
-              <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 text-center font-mono text-xs text-sky-300">
-                <MathBlock math="\tau_{ij} = \frac{1}{\lambda_{ij}}, \quad q_{ij}(t, 1) = u_{ij}(t - \tau_{ij}) r_i(z_i(t - \tau_{ij}))" />
-              </div>
-            </div>
-
-            {/* Box 2: ODE Buffer Balance */}
-            <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-purple-400 font-semibold text-xs">
-                <Cpu className="w-4 h-4" />
-                <span>2. ODE: Balance de Masa en el Búfer (Servidor / Nodos)</span>
-              </div>
-              <p className="text-xs text-slate-400">
-                La variación temporal de datos acumulados <MathBlock math="z_i(t)" /> [Mb] es igual a las entradas admitidas menos las salidas procesadas:
-              </p>
-              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
-                <MathBlock math="\frac{dz_i(t)}{dt} = w_i(t) d_i(t) + \sum_{k \in \mathcal{U}_i} w_i(t) q_{ki}(t, 1) - r_i(z_i(t)) \quad [\text{Mb/s}]" block />
-              </div>
-              <p className="text-xs text-slate-400">
-                Donde <MathBlock math="d_i" /> es la demanda física generada por los sensores y <MathBlock math="w_i \in [0, 1]" /> es el factor de admisión y descarte preventivo.
-              </p>
-            </div>
-
-            {/* Box 3: Non-linear Processing Function */}
-            <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs">
-                <BookOpen className="w-4 h-4" />
-                <span>3. Tasa de Procesamiento y Saturación No Lineal</span>
-              </div>
-              <p className="text-xs text-slate-400">
-                Con un tiempo medio de residencia <MathBlock math="\theta_i(z_i) = \frac{1 + z_i}{\epsilon_i}" />, la tasa de salida es:
-              </p>
-              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
-                <MathBlock math="r_i(z_i) = \frac{\epsilon_i z_i}{1 + z_i} \quad [\text{Mb/s}]" block />
-              </div>
-              <p className="text-xs text-slate-400">
-                Cumple que <MathBlock math="r_i(0) = 0" /> y para <MathBlock math="z_i \to \infty" />, <MathBlock math="r_i(z_i) \to \epsilon_i" /> (capacidad asintótica máxima de CPU). Derivada estrictamente decreciente en aceleración: <MathBlock math="r_i'(z_i) = \frac{\epsilon_i}{(1 + z_i)^2} > 0" />.
-              </p>
-            </div>
-
-            {/* Box 4: Algebraic Equilibrium */}
-            <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
-                <GraduationCap className="w-4 h-4" />
-                <span>4. Punto de Equilibrio Analítico z* y Condición ISS</span>
-              </div>
-              <p className="text-xs text-slate-400">
-                En régimen permanente (<MathBlock math="dz/dt = 0" /> y <MathBlock math="z(t-\tau) = z^*" />), despejando algebraicamente:
-              </p>
-              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
-                <MathBlock math="z^* = \frac{w \cdot d}{(1 - w \cdot u)\epsilon - w \cdot d} \quad [\text{Mb}]" block />
-              </div>
-              <p className="text-xs text-slate-400">
-                <strong>Condición de estabilidad y no desborde:</strong>
-              </p>
-              <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 text-center text-xs text-emerald-400 font-mono font-bold">
-                <MathBlock math="w \cdot d < (1 - w \cdot u)\epsilon \quad [\text{Mb/s}]" />
-              </div>
-            </div>
-          </div>
-
-          {/* Section: Calculation of Packets / Sensor Telemetry */}
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-3">
-            <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-              5. Cálculo Físico de la Demanda de Sensores d_k(t) [Mb/s]
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800">
-                <span className="font-bold text-sky-300 block mb-1">
-                  🌊 Sensor de Velocidad y Caudal de Arroyo:
-                </span>
-                <p className="text-slate-300">
-                  En calma (v ≈ 0.2 m/s), genera una tasa base de 4.0 Mb/s. Ante crecida turbulenta (v en m/s) y lluvia (R en mm/h), activa muestreo de alta resolución:
-                </p>
-                <div className="bg-slate-900 p-2 rounded text-center my-1 font-mono text-sky-400">
-                  <MathBlock math="d_{\text{vel}}(R, v) = 4.0 + 0.35 \cdot R + 4.2 \cdot (v - 0.2) \quad [\text{Mb/s}]" />
-                </div>
-              </div>
-
-              <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800">
-                <span className="font-bold text-amber-300 block mb-1">
-                  🌡️ Sensor de Temperatura del Agua:
-                </span>
-                <p className="text-slate-300">
-                  Registra desviaciones térmicas respecto a 26°C y monitoreo térmico de las bombas durante precipitaciones:
-                </p>
-                <div className="bg-slate-900 p-2 rounded text-center my-1 font-mono text-amber-400">
-                  <MathBlock math="d_{\text{temp}}(R, T) = 2.5 + 0.12 \cdot |T - 26| + 0.08 \cdot R \quad [\text{Mb/s}]" />
-                </div>
-              </div>
-            </div>
-            <p className="text-xs text-slate-400 mt-1">
-              La demanda combinada de cada nodo es <MathBlock math="d_k(t) = d_{\text{vel}, k} + d_{\text{temp}, k}" /> [paq/s o kB/s].
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
+            <span className="font-bold text-slate-200 block mb-1">
+              Transmisión Convencional Sin Gateway (Doble Peaje de Red):
+            </span>
+            <p className="text-slate-300 leading-relaxed">
+              Si el pluviómetro y el sensor de agua transmitieran individualmente a través de Internet al servidor central:
             </p>
+            <ul className="list-disc list-inside mt-2 space-y-1 text-slate-400 text-[11px]">
+              <li>Pluviómetro: ~20 B de lectura + ~59 B cabeceras IP/UDP = ~79 B</li>
+              <li>Sensor de Agua: ~20 B de lectura + ~59 B cabeceras IP/UDP = ~79 B</li>
+              <li>Total en viajes separados: <strong>~158 Bytes por ciclo</strong></li>
+              <li>Genera sobrecarga repetitiva por duplicación innecesaria de cabeceras.</li>
+            </ul>
           </div>
 
-          {/* Section 6: IoT Gateway Consolidation & Bandwidth Savings */}
-          <div className="p-4 rounded-xl bg-slate-900/90 border border-emerald-900/60 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
-                <span>🛡️ 6. Arquitectura IoT: Gateway Intermediario, Paquetes de ~119 Bytes y Ahorro del 25%</span>
-              </h4>
+          <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-800/50">
+            <span className="font-bold text-emerald-300 block mb-1">
+              Optimización con Gateway Intermediario (Un solo Viaje):
+            </span>
+            <p className="text-slate-300 leading-relaxed">
+              El Gateway recibe ambas lecturas locales de ~20 B, las consolida junto a un timestamp en una sola estructura JSON liviana y efectúa <strong>un único viaje</strong> de red:
+            </p>
+            <div className="bg-slate-950 p-2 rounded mt-2 font-mono text-[10px] text-emerald-300 border border-slate-800">
+              &#123;&quot;gw&quot;:1, &quot;ts&quot;:1776092400, &quot;rain&quot;:45.2, &quot;flow&quot;:76, &quot;spd&quot;:7.4&#125;
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800">
-                <span className="font-bold text-slate-200 block mb-1">
-                  📡 Transmisión Convencional Sin Gateway (Doble Peaje de Red):
-                </span>
-                <p className="text-slate-300">
-                  Si el sensor de velocidad y el de temperatura transmitieran directamente e individualmente por Internet al servidor:
-                </p>
-                <ul className="list-disc list-inside mt-1.5 space-y-1 text-slate-400 text-[11px]">
-                  <li>Sensor de velocidad: ~20 B de lectura + ~54 B de cabeceras IP/UDP = ~79 B</li>
-                  <li>Sensor de temperatura: ~20 B de lectura + ~54 B de cabeceras IP/UDP = ~79 B</li>
-                  <li>Total en viajes separados: <strong>~158 Bytes por ciclo</strong></li>
-                  <li>Genera sobrecarga innecesaria por duplicación de cabeceras de red.</li>
-                </ul>
-              </div>
-
-              <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-800/50">
-                <span className="font-bold text-emerald-300 block mb-1">
-                  ⚡ Optimización con Gateway IoT Intermediario:
-                </span>
-                <p className="text-slate-300">
-                  El Gateway recibe las lecturas locales de ~20 B cada una, las unifica junto a una marca de tiempo en un solo formato estructurado (JSON) y realiza un <strong>único viaje</strong> hacia el servidor central:
-                </p>
-                <div className="bg-slate-950 p-2 rounded mt-2 font-mono text-[10px] text-emerald-300 border border-slate-800">
-                  &#123;&quot;gw&quot;:1, &quot;ts&quot;:1776092400, &quot;spd&quot;:7.4, &quot;flow&quot;:18.2, &quot;temp&quot;:24.5&#125;
-                </div>
-                <div className="mt-2 text-[11px] text-slate-300 flex items-center justify-between">
-                  <span>Peso final consolidado con cabeceras:</span>
-                  <strong className="text-emerald-400 font-mono">~119 Bytes / viaje</strong>
-                </div>
-                <div className="mt-1 text-[11px] text-emerald-300 font-semibold">
-                  Ahorro de ancho de banda: ~24.7% (≈ 25% menos sobrecarga de red).
-                </div>
-              </div>
+            <div className="mt-2 text-[11px] text-slate-300 flex items-center justify-between">
+              <span>Peso final consolidado con cabeceras:</span>
+              <strong className="text-emerald-400 font-mono">~119 Bytes / viaje</strong>
             </div>
-
-            <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-400">
-              <strong>Conclusión Técnica de Escala:</strong> El paquete resultante unificado es sumamente ligero (~119 Bytes = 0.119 kB). Bajo ninguna circunstancia este tipo de mediciones IoT en tiempo real debería acercarse a 1 MB, demostrando que la consolidación en el Gateway elimina la sobrecarga repetida y estabiliza el transporte PDE–ODE en la escala correcta de bytes y kilobytes.
+            <div className="mt-1 text-[11px] text-emerald-300 font-semibold">
+              Ahorro de ancho de banda: ~24.7% (≈ 25% menos sobrecarga de red).
             </div>
           </div>
         </div>
-      )}
+
+        <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-400">
+          <strong>Conclusión Técnica de Escala:</strong> El paquete resultante unificado es sumamente ligero (~119 Bytes = 0.119 kB). Bajo ninguna circunstancia este tipo de mediciones IoT en tiempo real debería acercarse a 1 MB, demostrando que la consolidación en el Gateway elimina la sobrecarga repetida y estabiliza el transporte PDE–ODE en la escala correcta de bytes y kilobytes.
+        </div>
+      </div>
     </div>
   );
 }

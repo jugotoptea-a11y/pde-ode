@@ -4,6 +4,7 @@ import React from 'react';
 import { SimulationState } from '@/lib/types';
 import { SERVER_MAX_BUFFER } from '@/lib/simulation-engine';
 import { Activity, AlertOctagon, CheckCircle2, Clock, Cpu, HardDrive, ShieldAlert } from 'lucide-react';
+import { MathBlock } from './MathBlock';
 
 interface PerformanceMetricsProps {
   state: SimulationState;
@@ -81,7 +82,7 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
       {/* 3. Server Buffer z(t) */}
       <div className="p-3 rounded-xl border bg-slate-900/80 border-slate-800 flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <span>Búfer Servidor z(t)</span>
+          <span className="flex items-center gap-1">Búfer Servidor <MathBlock math="z(t)" /></span>
           <HardDrive className="w-4 h-4 text-sky-400" />
         </div>
         <div className="mt-2 font-mono font-bold text-lg text-sky-400 tabular-nums">
@@ -95,7 +96,7 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
       {/* 4. Processing Rate r(z) */}
       <div className="p-3 rounded-xl border bg-slate-900/80 border-slate-800 flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <span>Salida Servidor r(z)</span>
+          <span className="flex items-center gap-1">Salida Servidor <MathBlock math="r(z)" /></span>
           <Activity className="w-4 h-4 text-purple-400" />
         </div>
         <div className="mt-2 font-mono font-bold text-lg text-purple-400 tabular-nums">
@@ -140,9 +141,13 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
         </div>
         <div className="text-[10px] font-mono tabular-nums">
           {isConditionMet ? (
-            <span className="text-emerald-400 font-semibold">wd &lt; (1-wu)ε ✓</span>
+            <span className="text-emerald-400 font-semibold flex items-center gap-1">
+              <MathBlock math="wd < (1-wu)\varepsilon" /> ✓
+            </span>
           ) : (
-            <span className="text-rose-400 font-semibold">wd ≥ (1-wu)ε ✗</span>
+            <span className="text-rose-400 font-semibold flex items-center gap-1">
+              <MathBlock math="wd \ge (1-wu)\varepsilon" /> ✗
+            </span>
           )}
         </div>
       </div>

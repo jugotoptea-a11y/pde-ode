@@ -1,16 +1,14 @@
 import {
   EnvironmentalState,
   GatewayNodeState,
-  CentralServerState,
-  PacketParticle,
   SimulationMode,
   SimulationState,
   WeatherPreset,
 } from './types';
 
 // Constants for IoT Packet Weights based on real telemetry specifications:
-export const LOCAL_SPEED_SENSOR_BYTES = 20; // ~20 B local raw reading
-export const LOCAL_TEMP_SENSOR_BYTES = 20;  // ~20 B local raw reading
+export const LOCAL_RAIN_SENSOR_BYTES = 20;  // ~20 B local raw reading (Pluviómetro)
+export const LOCAL_WATER_SENSOR_BYTES = 20; // ~20 B local raw reading (Sensor de Agua: Caudal y Velocidad acoplados)
 export const UNIFIED_PACKET_BYTES = 119;    // ~119 B JSON consolidated payload + IP/UDP headers
 export const SEPARATE_TX_BYTES = 158;       // ~158 B when sensors send individually with separate headers
 export const BANDWIDTH_SAVING_PERCENT = 24.7; // ~25% bandwidth saved by gateway consolidation
@@ -20,63 +18,156 @@ export const DEFAULT_LAMBDA = 1.8; // Effective propagation speed
 export const SERVER_MAX_BUFFER = 120; // Maximum physical buffer size in packets (~14.28 kB)
 export const GATEWAY_MAX_BUFFER = 80; // Maximum gateway buffer in packets (~9.52 kB)
 
-export const DEFAULT_GATEWAY_LOCATIONS = [
-  { name: 'Gateway 1 (Arroyo La 84)', location: 'Sector Norte - Cra 53 con Cll 84' },
-  { name: 'Gateway 2 (Arroyo Calle 76)', location: 'Sector Centro-Norte - Cll 76 con Cra 44' },
-  { name: 'Gateway 3 (Arroyo Felicidad)', location: 'Sector Suroccidente - Cll 48 con Cra 43' },
-  { name: 'Gateway 4 (Arroyo Hospital)', location: 'Sector Oriental - Vía 40 con Cll 34' },
+// 60 Empirical Pairs (Caudal Q in m³/s, Velocidad v in m/s) provided by the user
+export interface FlowVelocityPair {
+  flow: number;  // m³/s
+  speed: number; // m/s
+}
+
+// Exactly the 60 pairs provided, sorted by Caudal ascending to enable continuous hydraulic progression
+export const EMPIRICAL_FLOW_SPEED_PAIRS: FlowVelocityPair[] = [
+  { flow: 12, speed: 3.7 },
+  { flow: 16, speed: 4.1 },
+  { flow: 17, speed: 4.2 },
+  { flow: 19, speed: 4.4 },
+  { flow: 22, speed: 4.7 },
+  { flow: 23, speed: 5.0 },
+  { flow: 26, speed: 4.9 },
+  { flow: 27, speed: 4.7 },
+  { flow: 27, speed: 5.1 },
+  { flow: 29, speed: 5.2 },
+  { flow: 33, speed: 5.4 },
+  { flow: 34, speed: 5.5 },
+  { flow: 35, speed: 5.5 },
+  { flow: 37, speed: 5.7 },
+  { flow: 37, speed: 5.7 },
+  { flow: 42, speed: 6.0 },
+  { flow: 44, speed: 6.0 },
+  { flow: 45, speed: 6.1 },
+  { flow: 46, speed: 6.1 },
+  { flow: 46, speed: 6.1 },
+  { flow: 47, speed: 6.6 },
+  { flow: 52, speed: 6.4 },
+  { flow: 54, speed: 6.5 },
+  { flow: 56, speed: 6.2 },
+  { flow: 58, speed: 6.7 },
+  { flow: 59, speed: 6.7 },
+  { flow: 60, speed: 6.8 },
+  { flow: 61, speed: 7.2 },
+  { flow: 62, speed: 6.8 },
+  { flow: 64, speed: 6.9 },
+  { flow: 67, speed: 7.0 },
+  { flow: 68, speed: 7.1 },
+  { flow: 72, speed: 6.8 },
+  { flow: 73, speed: 7.2 },
+  { flow: 74, speed: 7.3 },
+  { flow: 76, speed: 7.4 },
+  { flow: 78, speed: 7.9 },
+  { flow: 80, speed: 7.9 },
+  { flow: 83, speed: 7.6 },
+  { flow: 84, speed: 7.6 },
+  { flow: 86, speed: 7.7 },
+  { flow: 87, speed: 7.7 },
+  { flow: 87, speed: 7.7 },
+  { flow: 92, speed: 7.4 },
+  { flow: 94, speed: 7.5 },
+  { flow: 99, speed: 8.1 },
+  { flow: 100, speed: 8.1 },
+  { flow: 110, speed: 8.4 },
+  { flow: 112, speed: 8.4 },
+  { flow: 113, speed: 8.4 },
+  { flow: 113, speed: 8.5 },
+  { flow: 114, speed: 8.5 },
+  { flow: 127, speed: 8.8 },
+  { flow: 129, speed: 8.9 },
+  { flow: 132, speed: 8.9 },
+  { flow: 144, speed: 9.2 },
+  { flow: 147, speed: 9.3 },
+  { flow: 159, speed: 9.5 },
+  { flow: 183, speed: 9.9 },
+  { flow: 208, speed: 10.4 },
 ];
 
+export function getFlowVelocityPair(index: number): FlowVelocityPair {
+  const safeIdx = Math.max(0, Math.min(EMPIRICAL_FLOW_SPEED_PAIRS.length - 1, Math.round(index)));
+  return EMPIRICAL_FLOW_SPEED_PAIRS[safeIdx];
+}
+
+
+export const DEFAULT_GATEWAY_LOCATIONS = [
+  { name: 'Gateway 1', location: 'Canal Primario - Estación de Telemetría 1' },
+  { name: 'Gateway 2', location: 'Canal Secundario - Estación de Telemetría 2' },
+  { name: 'Gateway 3', location: 'Colector Auxiliar - Estación de Telemetría 3' },
+  { name: 'Gateway 4', location: 'Colector de Alivio - Estación de Telemetría 4' },
+];
+
+/**
+ * Creates environmental state from preset
+ * Historical reference rainfall range: 0.8 mm (dry) to 160.5 mm (max recorded), up to 180 mm.
+ */
 export function createInitialEnvironmentalState(preset: WeatherPreset = 'dry'): EnvironmentalState {
   switch (preset) {
-    case 'dry':
-      return { rainIntensity: 5, waterSpeed: 0.8, waterTemp: 27.5 };
-    case 'moderate':
-      return { rainIntensity: 45, waterSpeed: 3.2, waterTemp: 26.0 };
-    case 'torrential':
-      return { rainIntensity: 110, waterSpeed: 7.5, waterTemp: 24.2 };
-    case 'extreme_flood':
-      return { rainIntensity: 165, waterSpeed: 10.8, waterTemp: 23.5 };
-    default:
-      return { rainIntensity: 10, waterSpeed: 1.0, waterTemp: 27.0 };
+    case 'dry': {
+      const pair = getFlowVelocityPair(0); // 12 m³/s, 3.7 m/s
+      return { rain_mm: 0.8, flowIndex: 0, waterFlow: pair.flow, waterSpeed: pair.speed };
+    }
+    case 'moderate': {
+      const pair = getFlowVelocityPair(22); // 54 m³/s, 6.5 m/s
+      return { rain_mm: 38.0, flowIndex: 22, waterFlow: pair.flow, waterSpeed: pair.speed };
+    }
+    case 'torrential': {
+      const pair = getFlowVelocityPair(44); // 94 m³/s, 7.5 m/s
+      return { rain_mm: 93.7, flowIndex: 44, waterFlow: pair.flow, waterSpeed: pair.speed };
+    }
+    case 'extreme_flood': {
+      const pair = getFlowVelocityPair(59); // 208 m³/s, 10.4 m/s
+      return { rain_mm: 160.5, flowIndex: 59, waterFlow: pair.flow, waterSpeed: pair.speed };
+    }
+    default: {
+      const pair = getFlowVelocityPair(0);
+      return { rain_mm: 1.0, flowIndex: 0, waterFlow: pair.flow, waterSpeed: pair.speed };
+    }
   }
 }
 
+/**
+ * Computes telemetry rates for Pluviómetro (rain) and Water Sensor (coupled Q and v)
+ */
 export function computeSensorTelemetry(env: EnvironmentalState) {
-  // Speed and water flow calculation
-  const speed = Math.max(0.2, env.waterSpeed);
-  // Cross section model approx for urban stream in Barranquilla: A(h) ~ 2.5 + (rain / 180) * 8.0
-  const crossSection = 2.5 + (env.rainIntensity / 180) * 8.0;
-  const flow = Number((speed * crossSection).toFixed(2));
-  const temp = Number(env.waterTemp.toFixed(1));
+  const rain = Math.max(0, env.rain_mm);
+  const pair = getFlowVelocityPair(env.flowIndex);
+  const flow = pair.flow;
+  const speed = pair.speed;
 
-  // Traffic demand generation formula (sampling frequency increases during severe rain/flood):
-  // Speed sensor generates more samples under turbulent water flow
-  const speedRate = 4.0 + 0.35 * env.rainIntensity + 4.2 * (speed - 0.2);
-  const tempRate = 2.5 + 0.12 * Math.abs(temp - 26) + 0.08 * env.rainIntensity;
-  
-  // Total packets per second generated
-  const totalDemand = Number((speedRate + tempRate).toFixed(1));
-  // Total data rate in kB/s (each unified packet is 119 Bytes = 0.119 kB)
+  // 1. Pluviómetro rate: Base telemetry 3.0 paq/s + scale proportional to rainfall mm
+  const rainRate = 3.0 + 0.28 * rain;
+
+  // 2. Water Sensor rate: Base 3.5 paq/s + scaled by flow and speed
+  const waterRate = 3.5 + 0.18 * flow + 2.2 * Math.max(0, speed - 3.5);
+
+  // Total packet demand in paq/s
+  const totalDemand = Number((rainRate + waterRate).toFixed(1));
+
+  // In kB/s (each unified packet is 119 Bytes = 0.119 kB)
   const demandKBS = Number(((totalDemand * UNIFIED_PACKET_BYTES) / 1000).toFixed(2));
 
   return {
-    speedSensor: {
-      waterSpeed: Number(speed.toFixed(2)),
-      waterFlow: flow,
-      waterTemp: temp,
-      generationRate: Number(speedRate.toFixed(1)),
-      bytesRate: Number(((speedRate * LOCAL_SPEED_SENSOR_BYTES) / 1000).toFixed(2)),
-      rawSensorBytes: LOCAL_SPEED_SENSOR_BYTES,
+    rainSensor: {
+      name: 'Pluviómetro',
+      reading: `${rain.toFixed(1)} mm`,
+      generationRate: Number(rainRate.toFixed(1)),
+      bytesRate: Number(((rainRate * LOCAL_RAIN_SENSOR_BYTES) / 1000).toFixed(2)),
+      rawBytes: LOCAL_RAIN_SENSOR_BYTES,
     },
-    tempSensor: {
-      waterSpeed: Number(speed.toFixed(2)),
-      waterFlow: flow,
-      waterTemp: temp,
-      generationRate: Number(tempRate.toFixed(1)),
-      bytesRate: Number(((tempRate * LOCAL_TEMP_SENSOR_BYTES) / 1000).toFixed(2)),
-      rawSensorBytes: LOCAL_TEMP_SENSOR_BYTES,
+    waterSensor: {
+      name: 'Sensor de Agua (Q y v)',
+      reading: `Q=${flow} m³/s, v=${speed.toFixed(1)} m/s`,
+      generationRate: Number(waterRate.toFixed(1)),
+      bytesRate: Number(((waterRate * LOCAL_WATER_SENSOR_BYTES) / 1000).toFixed(2)),
+      rawBytes: LOCAL_WATER_SENSOR_BYTES,
     },
+    waterFlow: flow,
+    waterSpeed: speed,
     totalDemand,
     demandKBS,
   };
@@ -102,8 +193,8 @@ export function createInitialState(numGateways: number = 3, mode: SimulationMode
       location: loc.location,
       environment: env,
       sensors: {
-        speedSensor: telemetry.speedSensor,
-        tempSensor: telemetry.tempSensor,
+        rainSensor: telemetry.rainSensor,
+        waterSensor: telemetry.waterSensor,
       },
       buffer: 4.0, // in packets (~0.48 kB)
       bufferCapacity: GATEWAY_MAX_BUFFER,
@@ -214,12 +305,14 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
   state.gateways.forEach((gw) => {
     const telemetry = computeSensorTelemetry(gw.environment);
     gw.sensors = {
-      speedSensor: telemetry.speedSensor,
-      tempSensor: telemetry.tempSensor,
+      rainSensor: telemetry.rainSensor,
+      waterSensor: telemetry.waterSensor,
     };
+    gw.environment.waterFlow = telemetry.waterFlow;
+    gw.environment.waterSpeed = telemetry.waterSpeed;
     
     // In unoptimized mode (if sensors don't consolidate through gateway),
-    // they send separate packets with 25% extra header overhead!
+    // they send separate packets with ~25% extra overhead (158 B vs 119 B)!
     const effectiveDemand = mode === 'unoptimized' 
       ? Number((telemetry.totalDemand * (SEPARATE_TX_BYTES / UNIFIED_PACKET_BYTES)).toFixed(1))
       : telemetry.totalDemand;
@@ -277,7 +370,7 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
     gw.outflow = gwProcessing;
 
     // ODE: dz_k/dt = w_k * d_k - r_k(z_k)
-    let dz_k = (admittedDemand - gwProcessing) * dt;
+    const dz_k = (admittedDemand - gwProcessing) * dt;
     gw.buffer = Math.max(0.01, gw.buffer + dz_k);
 
     // Overflow check on gateway

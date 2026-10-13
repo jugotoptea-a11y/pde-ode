@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { SimulationMode } from '@/lib/types';
-import { Play, Pause, RotateCcw, Zap, AlertTriangle, ShieldCheck, Server, Network } from 'lucide-react';
+import { Play, Pause, RotateCcw, AlertTriangle, ShieldCheck, Server, Network } from 'lucide-react';
 
 interface SimulationToolbarProps {
   mode: SimulationMode;
@@ -46,8 +46,8 @@ export function SimulationToolbar({
           <button
             onClick={() => onToggleMode('unoptimized')}
             className={`flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all border ${mode === 'unoptimized'
-                ? 'bg-rose-950/90 border-rose-500 text-rose-200 shadow-lg shadow-rose-950/50 ring-1 ring-rose-400/30'
-                : 'bg-slate-900 border-slate-700/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              ? 'bg-rose-950/90 border-rose-500 text-rose-200 shadow-lg shadow-rose-950/50 ring-1 ring-rose-400/30'
+              : 'bg-slate-900 border-slate-700/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
               }`}
           >
             <AlertTriangle className={`w-4 h-4 ${mode === 'unoptimized' ? 'text-rose-400 animate-bounce' : 'text-slate-500'}`} />
@@ -61,8 +61,8 @@ export function SimulationToolbar({
           <button
             onClick={() => onToggleMode('optimized')}
             className={`flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all border ${mode === 'optimized'
-                ? 'bg-emerald-950/90 border-emerald-500 text-emerald-200 shadow-lg shadow-emerald-950/50 ring-1 ring-emerald-400/30'
-                : 'bg-slate-900 border-slate-700/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              ? 'bg-emerald-950/90 border-emerald-500 text-emerald-200 shadow-lg shadow-emerald-950/50 ring-1 ring-emerald-400/30'
+              : 'bg-slate-900 border-slate-700/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
               }`}
           >
             <ShieldCheck className={`w-4 h-4 ${mode === 'optimized' ? 'text-emerald-400' : 'text-slate-500'}`} />
@@ -78,8 +78,8 @@ export function SimulationToolbar({
           <button
             onClick={onTogglePlayPause}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold shadow transition-all ${isRunning
-                ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+              ? 'bg-amber-600 hover:bg-amber-500 text-white'
+              : 'bg-indigo-600 hover:bg-indigo-500 text-white'
               }`}
           >
             {isRunning ? (
@@ -137,19 +137,14 @@ export function SimulationToolbar({
                 key={n}
                 onClick={() => onChangeNumGateways(n)}
                 className={`py-1.5 rounded-lg text-xs font-semibold transition-all border ${numGateways === n
-                    ? 'bg-sky-600 border-sky-400 text-white shadow'
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  ? 'bg-sky-600 border-sky-400 text-white shadow'
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                   }`}
               >
                 {n === 1 ? '1 Gateway' : `${n} Gateways`}
               </button>
             ))}
           </div>
-          <p className="text-[10px] text-slate-400">
-            {numGateways === 1
-              ? 'Modelo de Línea Única (PDF Sección 7): emisor k conectado por una PDE a receptor i.'
-              : `Red con ${numGateways} líneas PDE concurrentes que convergen en el servidor central (PDF Sección 6).`}
-          </p>
         </div>
 
         {/* Server Max Processing Capacity (Epsilon) Slider */}
