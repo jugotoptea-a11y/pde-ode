@@ -4,10 +4,15 @@ import React from 'react';
 import { MathBlock } from './MathBlock';
 import { GraduationCap, Table, Waves, Cpu, BookOpen, ShieldCheck, CloudRain } from 'lucide-react';
 
+/**
+ * Componente de Referencia Matemática y Fundamentación Teórica PDE–ODE.
+ * Presenta la tabla tipificada de variables, las ecuaciones diferenciales acopladas,
+ * la reducción escalar homogénea sobre las N líneas de transmisión y la arquitectura IoT.
+ */
 export function MathematicalReference() {
   return (
     <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-xl flex flex-col gap-6 text-sm text-slate-300">
-      {/* Institutional Header Banner */}
+      {/* Encabezado Institucional del Proyecto */}
       <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-indigo-950 text-indigo-400 border border-indigo-800/60">
@@ -26,11 +31,11 @@ export function MathematicalReference() {
           </div>
         </div>
         <div className="px-3 py-1.5 rounded-lg bg-indigo-950/70 border border-indigo-700/50 text-indigo-300 text-xs font-mono self-start sm:self-center">
-          Grupo 24382
+          Grupo 24392
         </div>
       </div>
 
-      {/* Section 1: Complete Table of Variables and Parameters from the PDF Document */}
+      {/* Sección 1: Tabla Exhaustiva de Variables y Parámetros del Modelo */}
       <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-3">
         <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
           <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
@@ -71,7 +76,7 @@ export function MathematicalReference() {
                   <MathBlock math="x \in [0, 1]" />
                 </td>
                 <td className="py-2.5 px-3 font-sans text-slate-300">
-                  Posición espacial normalizada a lo largo del canal de transmisión (<MathBlock math="x=0" /> emisor, <MathBlock math="x=1" /> receptor).
+                  Posición espacial normalizada a lo largo de cada canal de transmisión (<MathBlock math="x=0" /> emisor, <MathBlock math="x=1" /> receptor).
                 </td>
                 <td className="py-2.5 px-3 font-mono text-slate-300">Adimensional [0, 1]</td>
                 <td className="py-2.5 px-3 font-mono text-slate-400">Canal Gateway k → Servidor</td>
@@ -83,10 +88,10 @@ export function MathematicalReference() {
                   <MathBlock math="q_{ij}(t, x)" />
                 </td>
                 <td className="py-2.5 px-3 font-sans text-slate-300">
-                  Densidad o magnitud de tráfico de datos en tránsito por la línea que conecta el nodo <MathBlock math="i" /> con el nodo <MathBlock math="j" />.
+                  Flujo o densidad de tráfico de datos en tránsito por la línea que conecta el nodo <MathBlock math="i" /> con el nodo <MathBlock math="j" />.
                 </td>
                 <td className="py-2.5 px-3 font-mono text-emerald-400 font-semibold">Megabits [Mb]</td>
-                <td className="py-2.5 px-3 font-mono text-slate-300">Paquetes en vuelo / longitud</td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Paquetes/s en tránsito</td>
               </tr>
 
               {/* 4. \lambda_ij */}
@@ -107,7 +112,7 @@ export function MathematicalReference() {
                   <MathBlock math="z_i(t)" />
                 </td>
                 <td className="py-2.5 px-3 font-sans text-slate-300">
-                  Cantidad de datos acumulados en el búfer lógico de almacenamiento del nodo <MathBlock math="i" />.
+                  Cantidad de datos acumulados en el búfer lógico de almacenamiento del nodo/servidor <MathBlock math="i" />.
                 </td>
                 <td className="py-2.5 px-3 font-mono text-emerald-400 font-semibold">Megabits [Mb]</td>
                 <td className="py-2.5 px-3 font-mono text-slate-300">Paquetes (~119 B c/u)</td>
@@ -116,10 +121,10 @@ export function MathematicalReference() {
               {/* 6. d_i(t) */}
               <tr className="hover:bg-slate-900/60 transition-colors">
                 <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
-                  <MathBlock math="d_i(t)" />
+                  <MathBlock math="d(t) = \sum_{k=1}^N d_k(t)" />
                 </td>
                 <td className="py-2.5 px-3 font-sans text-slate-300">
-                  Demanda externa que llega al nodo <MathBlock math="i" /> generada por los sensores de campo (pluviómetro y sensor de agua).
+                  Demanda externa agregada generada por las <MathBlock math="N" /> estaciones de sensores (pluviómetro y sensor de agua).
                 </td>
                 <td className="py-2.5 px-3 font-mono text-amber-400 font-semibold">Megabits/segundo [Mb/s]</td>
                 <td className="py-2.5 px-3 font-mono text-slate-300">Paquetes/s y kB/s</td>
@@ -134,19 +139,19 @@ export function MathematicalReference() {
                   Factor dinámico de admisión del tráfico en el nodo <MathBlock math="i" /> (mecanismo de regulación preventiva de descarte).
                 </td>
                 <td className="py-2.5 px-3 font-mono text-slate-300">Adimensional [0, 1]</td>
-                <td className="py-2.5 px-3 font-mono text-slate-400">Control ISS (0.12 a 1.0)</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">Control ISS (0.05 a 1.0)</td>
               </tr>
 
               {/* 8. u_ij(t) */}
               <tr className="hover:bg-slate-900/60 transition-colors">
                 <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
-                  <MathBlock math="u_{ij}(t) \in [0, 1]" />
+                  <MathBlock math="u = \sum_{k=1}^N u_{ki} \in [0, 1)" />
                 </td>
                 <td className="py-2.5 px-3 font-sans text-slate-300">
-                  Fracción de enrutamiento del tráfico procesado por el nodo <MathBlock math="i" /> que se dirige hacia la línea del nodo <MathBlock math="j" />.
+                  Fracción agregada de enrutamiento/multiplexado (<MathBlock math="u_{ki} = u/N" /> por línea; <MathBlock math="1-u" /> es el caudal neto evacuado).
                 </td>
-                <td className="py-2.5 px-3 font-mono text-slate-300">Adimensional [0, 1]</td>
-                <td className="py-2.5 px-3 font-mono text-slate-400">Reparto de tráfico (1/N)</td>
+                <td className="py-2.5 px-3 font-mono text-slate-300">Adimensional [0, 1)</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">u = 0.20 (u_k = 0.20/N)</td>
               </tr>
 
               {/* 9. r_i(z_i) */}
@@ -206,7 +211,7 @@ export function MathematicalReference() {
                   Conjunto de nodos emisores conectados que transmiten tráfico hacia el nodo receptor <MathBlock math="i" />.
                 </td>
                 <td className="py-2.5 px-3 font-mono text-slate-300">Conjunto topológico</td>
-                <td className="py-2.5 px-3 font-mono text-slate-400">&#123;GW₁, GW₂, GW₃&#125;</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">&#123;GW₁, ..., GW_N&#125;</td>
               </tr>
 
               {/* 14. q_ij^0(x) */}
@@ -227,7 +232,7 @@ export function MathematicalReference() {
                   <MathBlock math="t_0 = t - \frac{x}{\lambda_{ij}}" />
                 </td>
                 <td className="py-2.5 px-3 font-sans text-slate-300">
-                  Instante temporal en que la característica salió de la frontera emisora <MathBlock math="x = 0" />.
+                  Instante temporal en que la curva característica partió de la frontera emisora <MathBlock math="x = 0" />.
                 </td>
                 <td className="py-2.5 px-3 font-mono text-slate-300">Segundos [s]</td>
                 <td className="py-2.5 px-3 font-mono text-slate-400">s</td>
@@ -278,83 +283,83 @@ export function MathematicalReference() {
                   Derivada marginal de la tasa de procesamiento; estrictamente positiva y decreciente (rendimientos marginales decrecientes).
                 </td>
                 <td className="py-2.5 px-3 font-mono text-slate-300">s⁻¹</td>
-                <td className="py-2.5 px-3 font-mono text-slate-400">Aceleración de servicio</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">Pendiente de servicio</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Section 2: Mathematical Derivations & Differential Equations */}
+      {/* Sección 2: Derivación Matemática de las Ecuaciones Diferenciales */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Box 1: PDE Transport */}
+        {/* Caja 1: Transporte PDE por Características */}
         <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-2">
           <div className="flex items-center gap-2 text-sky-400 font-semibold text-xs">
             <Waves className="w-4 h-4" />
-            <span>2. PDE: Dinámica del Tránsito (Ecuación de Advección)</span>
+            <span>2. PDE: Dinámica del Tránsito en las N Líneas (Método de Características)</span>
           </div>
           <p className="text-xs text-slate-400">
-            Transporte continuo del tráfico a lo largo de la línea normalizada <MathBlock math="x \in [0, 1]" /> (Ecuación 1 del PDF):
+            Transporte continuo a lo largo de cada línea <MathBlock math="k \in \mathcal{U}_i" /> en <MathBlock math="x \in [0, 1]" /> (Fase I, Pasos 1–8):
           </p>
           <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
-            <MathBlock math="\frac{\partial q_{ij}(t, x)}{\partial t} + \lambda_{ij} \frac{\partial q_{ij}(t, x)}{\partial x} = 0" block />
+            <MathBlock math="\frac{\partial q_{ki}(t, x)}{\partial t} + \lambda_{ki} \frac{\partial q_{ki}(t, x)}{\partial x} = 0" block />
           </div>
           <p className="text-xs text-slate-400">
-            Por el <strong>método de las características</strong>, <MathBlock math="x(t) - \lambda t = C" />. En la salida de la línea (<MathBlock math="x = 1" />):
+            Sobre las rectas características <MathBlock math="x(t) - \lambda t = C" />, evaluando en la llegada al servidor (<MathBlock math="x = 1" />):
           </p>
           <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 text-center font-mono text-xs text-sky-300">
-            <MathBlock math="\tau_{ij} = \frac{1}{\lambda_{ij}}, \quad q_{ij}(t, 1) = u_{ij}(t - \tau_{ij}) r_i(z_i(t - \tau_{ij})), \quad t \ge \tau_{ij}" />
+            <MathBlock math="\tau = \frac{1}{\lambda}, \quad q_{ki}(t, 1) = u_{ki}(t - \tau)\, r(z(t - \tau)), \quad t \ge \tau" />
           </div>
         </div>
 
-        {/* Box 2: ODE Buffer Balance */}
+        {/* Caja 2: Balance ODE y Reducción Escalar */}
         <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-2">
           <div className="flex items-center gap-2 text-purple-400 font-semibold text-xs">
             <Cpu className="w-4 h-4" />
-            <span>3. ODE: Balance de Masa en el Búfer (Ecuación 14 del PDF)</span>
+            <span>3. ODE: Balance de Masa y Reducción Escalar (Fase II, Paso 9)</span>
           </div>
           <p className="text-xs text-slate-400">
-            La acumulación temporal de datos <MathBlock math="z_i(t)" /> resulta de la demanda admitida más los flujos entrantes de otros nodos menos la tasa de procesamiento:
+            Acoplando la demanda agregada <MathBlock math="d = \sum d_k" /> y la suma de las <MathBlock math="N" /> líneas <MathBlock math="\sum_{k \in \mathcal{U}_i} u_{ki} = u" />:
           </p>
           <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
-            <MathBlock math="\frac{dz_i(t)}{dt} = w_i(t) d_i(t) + \sum_{k \in \mathcal{U}_i} w_i(t) q_{ki}(t, 1) - r_i(z_i(t))" block />
+            <MathBlock math="\frac{dz}{dt} = w d + w u \cdot \frac{\varepsilon \cdot z(t - \tau)}{1 + z(t - \tau)} - \frac{\varepsilon \cdot z(t)}{1 + z(t)}" block />
           </div>
           <p className="text-xs text-slate-400">
-            Donde <MathBlock math="w_i \in [0, 1]" /> regula la admisión para prevenir cuellos de botella e inestabilidades de desborde.
+            Donde <MathBlock math="w \in [0, 1]" /> regula la admisión y <MathBlock math="u = \sum_{k=1}^N u_{ki} \in [0, 1)" /> representa la fracción agregada de enrutamiento.
           </p>
         </div>
 
-        {/* Box 3: Non-linear Processing Function */}
+        {/* Caja 3: Función No Lineal de Procesamiento */}
         <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-2">
           <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs">
             <BookOpen className="w-4 h-4" />
-            <span>4. Función No Lineal de Procesamiento (Ecuaciones 15–18)</span>
+            <span>4. Función No Lineal de Procesamiento y Saturación</span>
           </div>
           <p className="text-xs text-slate-400">
-            Con un tiempo medio de residencia <MathBlock math="\theta_i(z_i) = \frac{1 + z_i}{\varepsilon_i}" />, la tasa de servicio es <MathBlock math="r_i(z_i) = \frac{z_i}{\theta_i(z_i)}" />:
+            Con tiempo medio de residencia <MathBlock math="\theta_i(z_i) = \frac{1 + z_i}{\varepsilon_i}" />, la tasa de servicio es <MathBlock math="r_i(z_i) = \frac{z_i}{\theta_i(z_i)}" />:
           </p>
           <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
             <MathBlock math="r_i(z_i) = \frac{\varepsilon_i z_i}{1 + z_i}" block />
           </div>
           <p className="text-xs text-slate-400">
-            Cumple <MathBlock math="r_i(0) = 0" /> y asíntota límite <MathBlock math="\lim_{z_i \to \infty} r_i(z_i) = \varepsilon_i" />. Derivada decreciente: <MathBlock math="r_i'(z_i) = \frac{\varepsilon_i}{(1 + z_i)^2} > 0" />.
+            Cumple <MathBlock math="r_i(0) = 0" /> y asíntota límite <MathBlock math="\lim_{z_i \to \infty} r_i(z_i) = \varepsilon_i" />. En equilibrio: <MathBlock math="r(z^*) = \frac{w d}{1 - w u}" />.
           </p>
         </div>
 
-        {/* Box 4: Algebraic Equilibrium & Proof */}
+        {/* Caja 4: Equilibrio Algebraico y Condición ISS */}
         <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-2">
           <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
             <GraduationCap className="w-4 h-4" />
-            <span className="flex items-center gap-1">5. Cálculo Algebraico del Equilibrio <MathBlock math="z^*" /> y Condición ISS (Sec. 9)</span>
+            <span className="flex items-center gap-1">5. Punto de Equilibrio <MathBlock math="z^*" /> y Condición ISS (Pasos 10–16)</span>
           </div>
           <p className="text-xs text-slate-400">
-            En régimen estacionario (<MathBlock math="dz/dt = 0" /> y <MathBlock math="z(t-\tau) = z^*" />), agrupando términos y despejando:
+            En régimen permanente (<MathBlock math="dz/dt = 0" /> y <MathBlock math="z(t-\tau) = z^*" />), despejando algebraicamente:
           </p>
           <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
             <MathBlock math="z^* = \frac{w \cdot d}{(1 - w \cdot u)\varepsilon - w \cdot d}" block />
           </div>
           <p className="text-xs text-slate-400">
-            <strong>Condición analítica de no-desborde y equilibrio finito:</strong>
+            <strong>Condición analítica de existencia física y no-desborde:</strong>
           </p>
           <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 text-center text-xs text-emerald-400 font-mono font-bold">
             <MathBlock math="w \cdot d < (1 - w \cdot u)\varepsilon" />
@@ -362,28 +367,28 @@ export function MathematicalReference() {
         </div>
       </div>
 
-      {/* Section 3: Illustrative Numerical Example from PDF Section 10 */}
+      {/* Sección 3: Ejemplo Numérico Ilustrativo */}
       <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-3">
         <div className="flex items-center gap-2 text-sky-400 font-bold text-xs uppercase tracking-wider">
           <BookOpen className="w-4 h-4" />
-          <span>6. Ejemplo Numérico Ilustrativo del Documento (PDF Sección 10)</span>
+          <span>6. Ejemplo Numérico de Verificación Algebraica</span>
         </div>
         <p className="text-xs text-slate-400">
-          Con los parámetros ilustrativos del documento: <MathBlock math="w = 0.8, \ u = 0.5, \ d = 10, \ \varepsilon = 20" />:
+          Con parámetros ilustrativos <MathBlock math="w = 0.8, \ u = 0.5, \ d = 10, \ \varepsilon = 20" />:
         </p>
         <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 text-center font-mono text-xs text-sky-300 overflow-x-auto">
           <MathBlock math="z^* = \frac{0.8 \times 10}{(1 - 0.8 \times 0.5) \times 20 - 0.8 \times 10} = \frac{8}{(1 - 0.4) \times 20 - 8} = \frac{8}{12 - 8} = \frac{8}{4} = 2" block />
         </div>
         <p className="text-xs text-slate-400">
-          El equilibrio teórico calculado es exactamente <MathBlock math="z^* = 2" /> unidades de estado del búfer.
+          El equilibrio teórico calculado es exactamente <MathBlock math="z^* = 2" /> paquetes en el búfer, cumpliendo <MathBlock math="r(z^*) = 20 \cdot \frac{2}{3} = \frac{8}{0.6} = 13.33\text{ paq/s}" />.
         </p>
       </div>
 
-      {/* Section 4: Sensor Telemetry & IoT Architecture */}
+      {/* Sección 4: Telemetría de Sensores e Hidrología */}
       <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-3">
         <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
           <CloudRain className="w-4 h-4 text-sky-400" />
-          <span>7. Reestructuración de Sensores: Pluviómetro y Sensor de Agua (Q y v acoplados)</span>
+          <span>7. Modelado de Sensores: Pluviómetro y Sensor de Agua (Q y v acoplados)</span>
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800">
@@ -391,7 +396,7 @@ export function MathematicalReference() {
               Pluviómetro (Precipitación Acumulada):
             </span>
             <p className="text-slate-300 leading-relaxed">
-              Basado en el <strong>rango histórico de referencia pluviométrica</strong> (desde 0.8 mm en estiaje seco hasta 160.5 mm en el pico de precipitación acumulada, extensible a 180 mm en eventos extremos de tormenta).
+              Basado en el <strong>rango histórico de referencia pluviométrica</strong> (desde 0.8 mm en estiaje seco hasta 160.5 mm en el pico histórico registrado, extensible a 180 mm en eventos extremos).
             </p>
             <div className="bg-slate-950 p-2 rounded text-center my-2 font-mono text-sky-400 border border-slate-800">
               <MathBlock math="d_{\text{pluv}}(P) = 3.0 + 0.28 \cdot P \quad [\text{paq/s}]" />
@@ -406,7 +411,7 @@ export function MathematicalReference() {
               Sensor de Agua (Caudal Q y Velocidad v Acoplados):
             </span>
             <p className="text-slate-300 leading-relaxed">
-              Mide simultáneamente el caudal estimado <MathBlock math="Q \text{ [m}^3\text{/s]}" /> y la velocidad estimada <MathBlock math="v \text{ [m/s]}" /> acoplados según la tabla de 60 mediciones empíricas de campo (rango de <MathBlock math="12\text{ m}^3\text{/s}, 3.7\text{ m/s}" /> hasta <MathBlock math="208\text{ m}^3\text{/s}, 10.4\text{ m/s}" />).
+              Mide simultáneamente el caudal estimado <MathBlock math="Q \text{ [m}^3\text{/s]}" /> y la velocidad media <MathBlock math="v \text{ [m/s]}" /> acoplados según la matriz de 60 mediciones empíricas de campo (de <MathBlock math="12\text{ m}^3\text{/s}, 3.7\text{ m/s}" /> hasta <MathBlock math="208\text{ m}^3\text{/s}, 10.4\text{ m/s}" />).
             </p>
             <div className="bg-slate-950 p-2 rounded text-center my-2 font-mono text-teal-400 border border-slate-800">
               <MathBlock math="d_{\text{water}}(Q, v) = 3.5 + 0.18 \cdot Q + 2.2 \cdot (v - 3.5) \quad [\text{paq/s}]" />
@@ -418,11 +423,11 @@ export function MathematicalReference() {
         </div>
       </div>
 
-      {/* Section 5: IoT Gateway Consolidation & Bandwidth Savings */}
+      {/* Sección 5: Consolidación en Gateway y Ahorro de Ancho de Banda */}
       <div className="p-4 rounded-xl bg-slate-950/90 border border-emerald-900/60 flex flex-col gap-3">
         <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>8. Arquitectura IoT: Consolidación en Gateway, Paquete de ~119 Bytes y Ahorro del 25%</span>
+          <span>8. Arquitectura IoT: Consolidación en Gateway, Paquete de ~119 Bytes y Ahorro del 24.7%</span>
         </h4>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">

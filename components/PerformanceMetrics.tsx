@@ -6,30 +6,38 @@ import { SERVER_MAX_BUFFER } from '@/lib/simulation-engine';
 import { Activity, AlertOctagon, CheckCircle2, Clock, Cpu, HardDrive, ShieldAlert } from 'lucide-react';
 import { MathBlock } from './MathBlock';
 
+// Propiedades del componente de indicadores clave de desempeño (KPIs) en tiempo real
 interface PerformanceMetricsProps {
   state: SimulationState;
 }
 
+/**
+ * Componente que muestra las 6 métricas operativas principales del Servidor Central
+ * y verifica en tiempo real la condición analítica de existencia de equilibrio finito:
+ *   w * d < (1 - w * u) * \varepsilon
+ */
 export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
   const isBottleneck = state.server.isBottleneck;
   const isOptimized = state.mode === 'optimized';
 
-  // Calculate packet loss percentage
+  // Cálculo del porcentaje acumulado de pérdida de paquetes por desborde (buffer overflow)
   const totalFlow = state.server.totalProcessed + state.server.totalDropped;
   const lossPercentage = totalFlow > 0 ? (state.server.totalDropped / totalFlow) * 100 : 0;
 
-  // Stability condition: w*d < (1 - w*u)*epsilon
-  const avgW = state.gateways.reduce((a, g) => a + g.w, 0) / state.gateways.length;
-  const avgU = state.gateways.reduce((a, g) => a + g.u, 0) / state.gateways.length;
-  const dInflow = state.server.inflow;
+  // Verificación exacta de la condición analítica de estabilidad bajo reducción escalar:
+  //   w * d < (1 - w * u) * \varepsilon
+  // donde d = \sum_{k=1}^N d_k es la demanda externa agregada y u = \sum_{k=1}^N u_{ki} es la fracción de enrutamiento
+  const w = state.server.w;
+  const u = state.server.u;
+  const totalDemandD = state.gateways.reduce((acc, g) => acc + g.demand, 0);
   const eps = state.server.epsilon;
-  const lhs = avgW * dInflow;
-  const rhs = (1 - avgW * avgU) * eps;
+  const lhs = w * totalDemandD;
+  const rhs = (1 - w * u) * eps;
   const isConditionMet = lhs < rhs;
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-      {/* 1. Status KPI */}
+      {/* 1. Indicador de Estado del Servidor (Flujo Libre vs Pre-Saturación vs Cuello de Botella) */}
       <div className={`p-3 rounded-xl border flex flex-col justify-between transition-colors ${
         isBottleneck
           ? 'bg-rose-950/50 border-rose-600/80 text-rose-200'
@@ -50,16 +58,24 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
             <span className="text-rose-400 animate-pulse">CUELLO DE BOTELLA</span>
           ) : isOptimized ? (
             <span className="text-emerald-400">ESTABLE (ISS)</span>
+          ) : isConditionMet ? (
+            <span className="text-sky-400">FLUJO LIBRE (FIFO)</span>
           ) : (
             <span className="text-amber-400">PRE-SATURACIÓN</span>
           )}
         </div>
         <div className="text-[10px] text-slate-400 mt-0.5">
-          {isBottleneck ? 'Desborde de cola en curso' : 'Consolidación IoT activa'}
+          {isBottleneck
+            ? 'Desborde de cola en curso'
+            : isOptimized
+            ? 'Consolidación IoT activa'
+            : isConditionMet
+            ? 'Demanda bajo umbral crítico'
+            : 'Riesgo inminente de colapso'}
         </div>
       </div>
 
-      {/* 2. Packet Drop Rate */}
+      {/* 2. Tasa Acumulada de Pérdida de Datos por Desborde */}
       <div className={`p-3 rounded-xl border flex flex-col justify-between transition-colors ${
         lossPercentage > 5
           ? 'bg-rose-950/40 border-rose-700/70'
@@ -79,7 +95,7 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
         </div>
       </div>
 
-      {/* 3. Server Buffer z(t) */}
+      {/* 3. Ocupación Instantánea del Búfer del Servidor z(t) */}
       <div className="p-3 rounded-xl border bg-slate-900/80 border-slate-800 flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs text-slate-400">
           <span className="flex items-center gap-1">Búfer Servidor <MathBlock math="z(t)" /></span>
@@ -93,7 +109,7 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
         </div>
       </div>
 
-      {/* 4. Processing Rate r(z) */}
+      {/* 4. Tasa No Lineal de Procesamiento r(z) */}
       <div className="p-3 rounded-xl border bg-slate-900/80 border-slate-800 flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs text-slate-400">
           <span className="flex items-center gap-1">Salida Servidor <MathBlock math="r(z)" /></span>
@@ -107,7 +123,7 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
         </div>
       </div>
 
-      {/* 5. CPU Utilization */}
+      {/* 5. Utilización de Capacidad Computacional (CPU) r(z) / \varepsilon */}
       <div className="p-3 rounded-xl border bg-slate-900/80 border-slate-800 flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs text-slate-400">
           <span>Carga de Servidor</span>
@@ -130,7 +146,7 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
         </div>
       </div>
 
-      {/* 6. Latency & Delay */}
+      {/* 6. Latencia de Cola y Condición Analítica de Estabilidad wd < (1 - wu)\varepsilon */}
       <div className="p-3 rounded-xl border bg-slate-900/80 border-slate-800 flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs text-slate-400">
           <span>Latencia de Cola</span>

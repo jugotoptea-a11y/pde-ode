@@ -4,12 +4,20 @@ import React, { useRef, useEffect } from 'react';
 import { SimulationState } from '@/lib/types';
 import { SERVER_MAX_BUFFER, GATEWAY_MAX_BUFFER } from '@/lib/simulation-engine';
 
+// Propiedades del lienzo interactivo de topología de red PDE-ODE
 interface NetworkCanvasProps {
   state: SimulationState;
   onSelectGateway?: (index: number) => void;
   selectedGatewayIndex?: number;
 }
 
+/**
+ * Lienzo HTML5 de doble búfer que dibuja en tiempo real:
+ * 1) Sensores locales (Pluviómetro y Sensor de Agua) de ~20 Bytes.
+ * 2) N Pasarelas Concentradoras (Gateways IoT) con sus factores w_k y u_{ki}.
+ * 3) N Líneas de Transmisión PDE (x ∈ [0, 1]) con propagación de partículas y retardo \tau = 1/\lambda.
+ * 4) El Servidor Central con su nivel de búfer z(t), equilibrio teórico z* y tasa de salida r(z).
+ */
 export function NetworkCanvas({
   state,
   onSelectGateway,
@@ -38,11 +46,11 @@ export function NetworkCanvas({
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, width, height);
 
-      // Deep clean background
+      // Fondo oscuro limpio del lienzo de simulación
       ctx.fillStyle = '#060a14';
       ctx.fillRect(0, 0, width, height);
 
-      // Very subtle grid lines
+      // Cuadrícula sutil de referencia espacial
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
       ctx.lineWidth = 1;
       const gridSize = 36;
@@ -61,10 +69,10 @@ export function NetworkCanvas({
 
       const numGateways = state.gateways.length;
 
-      // Balanced responsive layout coordinates
+      // Coordenadas responsivas de los elementos de la red
       const sensorCardW = 150;
       const sensorCardH = 40;
-      const sensorX = 24; // left margin
+      const sensorX = 24;
 
       const gwW = 116;
       const gwH = 68;
@@ -75,7 +83,7 @@ export function NetworkCanvas({
       const serverX = width - serverW - 28;
       const serverY = height / 2;
 
-      // Calculate vertical spacing
+      // Distribución vertical equitativa para los N Gateways y sus sensores asociados
       const gwSpacing = height / (numGateways + 1);
       const gwPositions: { x: number; y: number }[] = [];
       const sensorPositions: { rainY: number; waterY: number }[] = [];
@@ -91,7 +99,7 @@ export function NetworkCanvas({
         });
       }
 
-      // 1. DRAW PDE TRANSMISSION LINES (Gateway -> Central Server)
+      // 1. DIBUJAR LAS N LÍNEAS DE TRANSMISIÓN PDE (Gateway k → Servidor Central)
       gwPositions.forEach((gp, idx) => {
         const gw = state.gateways[idx];
         const isSelected = selectedGatewayIndex === idx;
@@ -112,7 +120,7 @@ export function NetworkCanvas({
           endY
         );
 
-        // Density-based gradient
+        // Gradiente de color proporcional a la densidad espacial q_{ki}(t, x) en la línea
         const grad = ctx.createLinearGradient(startX, startY, endX, endY);
         const q0 = gw.spatialQ[0] || 0;
         const qEnd = gw.spatialQ[gw.spatialQ.length - 1] || 0;
@@ -130,7 +138,7 @@ export function NetworkCanvas({
         ctx.lineWidth = isSelected ? 3.5 : 2;
         ctx.stroke();
 
-        // Sleek Line Badge positioned above curve
+        // Etiqueta informativa sobre cada línea de transmisión PDE
         const midX = (startX + endX) / 2;
         const midY = (startY + endY) / 2 + (idx - (numGateways - 1) / 2) * 14;
 
@@ -148,7 +156,7 @@ export function NetworkCanvas({
         ctx.fillText(`Línea ${idx + 1}: τ=${state.tau}s | 119B`, midX, midY - 2);
       });
 
-      // 2. DRAW MOVING PACKET PARTICLES ALONG PDE LINES
+      // 2. DIBUJAR PARTÍCULAS EN MOVIMIENTO SOBRE LAS CURVAS CARACTERÍSTICAS PDE
       state.particles.forEach((p) => {
         const gp = gwPositions[p.gatewayIndex];
         if (!gp) return;
@@ -158,6 +166,7 @@ export function NetworkCanvas({
         const endX = serverX;
         const endY = serverY;
 
+        // Interpolación sobre la curva de Bézier cúbica para x ∈ [0, 1]
         const t = Math.max(0, Math.min(1, p.x));
         const p0x = startX;
         const p0y = startY;
@@ -188,12 +197,12 @@ export function NetworkCanvas({
         ctx.shadowBlur = 0;
       });
 
-      // 3. DRAW SENSORS AND CONNECTIONS TO GATEWAY (Clean cards, NO overflowing globes!)
+      // 3. DIBUJAR TARJETAS DE SENSORES LOCALES Y NODOS GATEWAY IoT
       gwPositions.forEach((gp, idx) => {
         const gw = state.gateways[idx];
         const sPos = sensorPositions[idx];
 
-        // Connection line: Pluviómetro -> Gateway
+        // Enlace local: Pluviómetro → Gateway
         ctx.beginPath();
         ctx.moveTo(sensorX + sensorCardW, sPos.rainY);
         ctx.lineTo(gp.x, gp.y - 12);
@@ -201,7 +210,7 @@ export function NetworkCanvas({
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Connection line: Sensor de Agua -> Gateway
+        // Enlace local: Sensor de Agua → Gateway
         ctx.beginPath();
         ctx.moveTo(sensorX + sensorCardW, sPos.waterY);
         ctx.lineTo(gp.x, gp.y + 12);
@@ -209,7 +218,7 @@ export function NetworkCanvas({
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // --- SENSOR 1: PLUVIÓMETRO CARD ---
+        // --- TARJETA SENSOR 1: PLUVIÓMETRO ---
         const rY = sPos.rainY - sensorCardH / 2;
         ctx.beginPath();
         ctx.roundRect(sensorX, rY, sensorCardW, sensorCardH, 7);
@@ -219,7 +228,6 @@ export function NetworkCanvas({
         ctx.lineWidth = 1.2;
         ctx.stroke();
 
-        // Pluv icon circle
         ctx.beginPath();
         ctx.arc(sensorX + 16, rY + sensorCardH / 2, 10, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(14, 165, 233, 0.25)';
@@ -232,7 +240,6 @@ export function NetworkCanvas({
         ctx.textAlign = 'center';
         ctx.fillText('🌧️', sensorX + 16, rY + sensorCardH / 2 + 3);
 
-        // Pluv text
         ctx.textAlign = 'left';
         ctx.fillStyle = '#f8fafc';
         ctx.font = 'bold 10px sans-serif';
@@ -242,7 +249,7 @@ export function NetworkCanvas({
         ctx.font = '10px monospace';
         ctx.fillText(`${gw.environment.rain_mm.toFixed(1)} mm · ~20B`, sensorX + 32, rY + 30);
 
-        // --- SENSOR 2: SENSOR DE AGUA (Q y v) CARD ---
+        // --- TARJETA SENSOR 2: SENSOR DE AGUA (Q y v) ---
         const wY = sPos.waterY - sensorCardH / 2;
         ctx.beginPath();
         ctx.roundRect(sensorX, wY, sensorCardW, sensorCardH, 7);
@@ -252,7 +259,6 @@ export function NetworkCanvas({
         ctx.lineWidth = 1.2;
         ctx.stroke();
 
-        // Water icon circle
         ctx.beginPath();
         ctx.arc(sensorX + 16, wY + sensorCardH / 2, 10, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(20, 184, 166, 0.25)';
@@ -265,7 +271,6 @@ export function NetworkCanvas({
         ctx.textAlign = 'center';
         ctx.fillText('🌊', sensorX + 16, wY + sensorCardH / 2 + 3);
 
-        // Water text
         ctx.textAlign = 'left';
         ctx.fillStyle = '#f8fafc';
         ctx.font = 'bold 10px sans-serif';
@@ -275,7 +280,7 @@ export function NetworkCanvas({
         ctx.font = '9.5px monospace';
         ctx.fillText(`Q:${gw.environment.waterFlow} · v:${gw.environment.waterSpeed.toFixed(1)} m/s`, sensorX + 32, wY + 30);
 
-        // --- GATEWAY NODE CARD ---
+        // --- TARJETA DEL NODO CONCENTRADOR (GATEWAY k) ---
         const isSelected = selectedGatewayIndex === idx;
         const gLeft = gp.x;
         const gTop = gp.y - gwH / 2;
@@ -295,13 +300,12 @@ export function NetworkCanvas({
           ctx.shadowBlur = 0;
         }
 
-        // Gateway title
         ctx.fillStyle = isSelected ? '#38bdf8' : '#f8fafc';
         ctx.font = 'bold 11px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(`Gateway ${idx + 1}`, gLeft + gwW / 2, gTop + 17);
 
-        // Gateway Buffer progress bar
+        // Barra de progreso del búfer local del Gateway
         const bufRatio = Math.min(1, gw.buffer / GATEWAY_MAX_BUFFER);
         const barW = gwW - 24;
         const barH = 6;
@@ -318,14 +322,14 @@ export function NetworkCanvas({
         ctx.fillStyle = bufColor;
         ctx.fillRect(barX, barY, barW * bufRatio, barH);
 
-        // Gateway metrics
+        // Parámetros de demanda d_k, admisión w_k y fracción de enrutamiento u_{ki}
         ctx.fillStyle = '#94a3b8';
         ctx.font = '9px monospace';
         ctx.fillText(`d=${gw.demand.toFixed(1)} paq/s`, gLeft + gwW / 2, gTop + 43);
         ctx.fillText(`w=${gw.w.toFixed(2)} | u=${gw.u.toFixed(2)}`, gLeft + gwW / 2, gTop + 57);
       });
 
-      // 4. DRAW CENTRAL SERVER (Spacious, elegant box, NO overlapping text!)
+      // 4. DIBUJAR EL SERVIDOR CENTRAL RECEPTOR (ODE DE BALANCE Y COLA z(t))
       const isBottleneck = state.server.isBottleneck;
       const sLeft = serverX;
       const sTop = serverY - serverH / 2;
@@ -345,7 +349,7 @@ export function NetworkCanvas({
         ctx.shadowBlur = 0;
       }
 
-      // Server Header
+      // Título y capacidad asintótica \varepsilon del Servidor Central
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
@@ -355,7 +359,7 @@ export function NetworkCanvas({
       ctx.fillStyle = '#a5b4fc';
       ctx.fillText(`ε = ${state.server.epsilon} paq/s (${state.server.epsilonKBS.toFixed(1)} kB/s)`, sLeft + serverW / 2, sTop + 33);
 
-      // Buffer Bar in Server
+      // Barra de ocupación del búfer central z(t) respecto a Z_max (120 paquetes)
       const sBufRatio = Math.min(1, state.server.buffer / SERVER_MAX_BUFFER);
       const sBarW = serverW - 28;
       const sBarH = 12;
@@ -372,7 +376,7 @@ export function NetworkCanvas({
       ctx.fillStyle = sBufColor;
       ctx.fillRect(sBarX, sBarY, sBarW * sBufRatio, sBarH);
 
-      // Theoretical equilibrium z* marker line
+      // Línea marcadora del punto de equilibrio teórico z* sobre la barra del búfer
       if (state.server.isEquilibriumFinite) {
         const zRatio = Math.min(1, state.server.zEquilibrium / SERVER_MAX_BUFFER);
         const zMarkerX = sBarX + sBarW * zRatio;
@@ -384,7 +388,7 @@ export function NetworkCanvas({
         ctx.stroke();
       }
 
-      // Server Internal Metrics
+      // Métricas internas instantáneas del Servidor Central
       ctx.fillStyle = '#cbd5e1';
       ctx.font = '9px monospace';
       ctx.fillText(`Búfer z: ${state.server.buffer.toFixed(1)} paq (${state.server.bufferKB.toFixed(1)} kB)`, sLeft + serverW / 2, sTop + 70);
@@ -392,7 +396,7 @@ export function NetworkCanvas({
       ctx.fillText(`CPU: ${state.server.cpuUtilization.toFixed(0)}% · Latencia: ${state.server.queueDelay}ms`, sLeft + serverW / 2, sTop + 98);
       ctx.fillText(`Entrada: ${state.server.inflow.toFixed(1)} paq/s`, sLeft + serverW / 2, sTop + 112);
 
-      // Dedicated Status Badge below server box (separated cleanly)
+      // Insignia de estado operativo debajo de la caja del servidor
       const badgeY = sTop + serverH + 12;
       ctx.beginPath();
       ctx.roundRect(sLeft, badgeY, serverW, 26, 6);
@@ -417,7 +421,10 @@ export function NetworkCanvas({
         ctx.fillStyle = '#34d399';
         ctx.font = 'bold 9.5px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`ESTABLE (z*=${state.server.zEquilibrium.toFixed(1)} paq)`, sLeft + serverW / 2, badgeY + 16);
+        const zEqText = state.server.isEquilibriumFinite
+          ? `z*=${state.server.zEquilibrium.toFixed(1)} paq`
+          : 'z*→∞';
+        ctx.fillText(`ESTABLE (${zEqText})`, sLeft + serverW / 2, badgeY + 16);
       }
 
       ctx.restore();
@@ -431,6 +438,7 @@ export function NetworkCanvas({
     };
   }, [state, selectedGatewayIndex]);
 
+  // Manejador de clic sobre el lienzo para seleccionar interactivamente un Gateway
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas || !onSelectGateway) return;
@@ -455,7 +463,7 @@ export function NetworkCanvas({
 
   return (
     <div className="relative w-full h-full min-h-95 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col">
-      {/* Top Left Title Badge */}
+      {/* Insignia Superior Izquierda */}
       <div className="absolute top-3 left-4 z-10 flex items-center gap-2 bg-slate-900/90 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-700/60 text-xs">
         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
         <span className="font-semibold text-slate-200">Topología de Red PDE–ODE</span>
@@ -465,7 +473,7 @@ export function NetworkCanvas({
         </span>
       </div>
 
-      {/* Top Right Legend Badge */}
+      {/* Leyenda Superior Derecha */}
       <div className="absolute top-3 right-4 z-10 flex items-center gap-3 bg-slate-900/90 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-700/60 text-xs text-slate-300">
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-sky-400"></span> Pluviómetro (~20B)
@@ -484,10 +492,10 @@ export function NetworkCanvas({
         className="w-full h-full flex-1 cursor-pointer block"
       />
 
-      {/* Bottom Sub-bar */}
+      {/* Barra Inferior de Resumen Técnico */}
       <div className="bg-slate-900/90 border-t border-slate-800 px-4 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 text-xs text-slate-400">
         <div className="flex items-center gap-3">
-          <span>Consolidación Gateway: <strong>20B (Pluv) + 20B (Agua) → 119B JSON</strong> (-25% peaje) | Escala Bytes / kB (<strong>jamás 1 MB</strong>)</span>
+          <span>Consolidación Gateway: <strong>20B (Pluv) + 20B (Agua) → 119B JSON</strong> (-24.7% peaje) | Escala Bytes / kB (<strong>jamás 1 MB</strong>)</span>
         </div>
         <div className="font-mono text-slate-300">
           Retardo PDE: τ = 1/λ = <strong>{state.tau}s</strong> | Capacidad Servidor ε = <strong>{state.server.epsilon} paq/s ({state.server.epsilonKBS} kB/s)</strong>

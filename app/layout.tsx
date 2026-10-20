@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
+// Configuración de tipografías principales (Plus Jakarta Sans para interfaz y JetBrains Mono para métricas)
 const jakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
@@ -16,6 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+// Metadatos globales de la aplicación web Next.js
 export const metadata: Metadata = {
   title: "Cero DesBorde | Simulación Híbrida PDE–ODE de Drenaje Urbano",
   description: "Simulación de tráfico de datos y optimización de colas en estaciones de bombeo de drenaje urbano (CUC CIA 2026-2)",
@@ -29,6 +31,9 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Estructura raíz HTML de la aplicación (idioma español y tema oscuro).
+ */
 export default function RootLayout({
   children,
 }: {

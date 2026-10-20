@@ -5,10 +5,19 @@ import { SimulationState } from '@/lib/types';
 import { SERVER_MAX_BUFFER, nonlinearProcessingRate, SPATIAL_POINTS } from '@/lib/simulation-engine';
 import { MathBlock } from './MathBlock';
 
+// Propiedades del módulo de gráficas analíticas en tiempo real
 interface RealTimeChartsProps {
   state: SimulationState;
 }
 
+/**
+ * Componente de visualización gráfica en tiempo real mediante Canvas HTML5 de alta resolución.
+ * Incluye 4 vistas analíticas:
+ * 1) 'buffer': Evolución temporal del búfer z(t) frente al equilibrio analítico z* y el límite físico Z_max.
+ * 2) 'rates': Tasas de flujo de entrada \sum q_{ki}(t, 1), salida procesada r(z) y tasa de descarte.
+ * 3) 'saturation': Curva de saturación no lineal r(z) = \varepsilon z / (1 + z) y punto de operación instantáneo.
+ * 4) 'spatial': Perfil espacial de densidad q_{ki}(t, x) a lo largo de las N líneas de transmisión x ∈ [0, 1].
+ */
 export function RealTimeCharts({ state }: RealTimeChartsProps) {
   const [activeTab, setActiveTab] = useState<'buffer' | 'rates' | 'saturation' | 'spatial'>('buffer');
   const chartCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -36,18 +45,17 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, width, height);
 
-      // Deep clean background
+      // Fondo limpio de la gráfica
       ctx.fillStyle = '#060a14';
       ctx.fillRect(0, 0, width, height);
 
-      // Generous right gutter (115px) strictly reserved for threshold tags
-      // All data curves strictly stop at width - padding.right, guaranteeing ZERO line-text overlaps!
+      // Margen derecho reservado para etiquetas de umbrales (evita superposición con las curvas)
       const padding = { top: 26, right: 115, bottom: 36, left: 75 };
       const plotW = Math.max(10, width - padding.left - padding.right);
       const plotH = Math.max(10, height - padding.top - padding.bottom);
       const plotRight = width - padding.right;
 
-      // Draw horizontal grid lines
+      // Líneas horizontales de la cuadrícula
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
       ctx.lineWidth = 1;
       for (let i = 0; i <= 4; i++) {
@@ -59,11 +67,11 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
       }
 
       if (activeTab === 'buffer') {
-        // --- TAB 1: SERVER BUFFER z(t) ---
+        // --- PESTAÑA 1: DINÁMICA DEL BÚFER DEL SERVIDOR z(t) vs EQUILIBRIO z* ---
         const history = state.history;
         const maxBufferY = SERVER_MAX_BUFFER * 1.08;
 
-        // Draw Z_max Threshold Line (Red Dashed) across the plot only
+        // Línea de umbral físico máximo Z_max (roja punteada)
         const zMaxY = padding.top + plotH * (1 - SERVER_MAX_BUFFER / maxBufferY);
         ctx.beginPath();
         ctx.setLineDash([5, 5]);
@@ -74,7 +82,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Z_max Badge placed strictly in the RIGHT GUTTER (outside plot area)
+        // Etiqueta de Z_max en el margen derecho
         const zMaxBadgeX = plotRight + 8;
         ctx.beginPath();
         ctx.roundRect(zMaxBadgeX, zMaxY - 10, 96, 20, 4);
@@ -89,7 +97,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.textAlign = 'center';
         ctx.fillText(`Z_max: ${SERVER_MAX_BUFFER} paq`, zMaxBadgeX + 48, zMaxY + 4);
 
-        // Draw theoretical equilibrium z* (Cyan Dashed) across the plot only
+        // Línea del punto de equilibrio analítico z* (cian punteada)
         if (state.server.isEquilibriumFinite && state.server.zEquilibrium < maxBufferY) {
           const zStarY = padding.top + plotH * (1 - state.server.zEquilibrium / maxBufferY);
           ctx.beginPath();
@@ -101,8 +109,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
           ctx.stroke();
           ctx.setLineDash([]);
 
-          // Cyan Badge for z* placed strictly in the RIGHT GUTTER (outside plot area)
-          // If z* is very close to zMax, adjust Y to avoid badge collision in gutter
+          // Etiqueta de z* en el margen derecho (con ajuste anticolisión respecto a Z_max)
           let zStarBadgeY = zStarY - 10;
           if (Math.abs(zStarY - zMaxY) < 22) {
             zStarBadgeY = zMaxY + 12;
@@ -124,7 +131,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
           ctx.fillText(`z* = ${state.server.zEquilibrium.toFixed(1)} paq`, zStarBadgeX + 48, zStarBadgeY + 14);
         }
 
-        // Draw Buffer Trajectory Curve (stops strictly at plotRight)
+        // Curva de trayectoria temporal del búfer z(t)
         if (history.length > 1) {
           ctx.beginPath();
           history.forEach((pt, i) => {
@@ -139,7 +146,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
           ctx.lineWidth = 2.5;
           ctx.stroke();
 
-          // Gradient fill under curve
+          // Relleno degradado bajo la curva z(t)
           const areaGrad = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
           if (isBottleneck) {
             areaGrad.addColorStop(0, 'rgba(239, 68, 68, 0.35)');
@@ -156,7 +163,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
           ctx.fill();
         }
 
-        // Y-axis labels on left
+        // Etiquetas del eje vertical Y
         ctx.fillStyle = '#94a3b8';
         ctx.font = '600 11px ui-monospace, SFMono-Regular, monospace';
         ctx.textAlign = 'right';
@@ -164,19 +171,19 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.fillText(`${Math.round(SERVER_MAX_BUFFER / 2)} paq`, padding.left - 10, padding.top + plotH / 2 + 4);
         ctx.fillText('0 paq', padding.left - 10, height - padding.bottom + 4);
 
-        // X-axis label
+        // Etiqueta del eje horizontal X
         ctx.fillStyle = '#64748b';
         ctx.font = '500 12px system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('Tiempo de simulación (ventana de 18s) →', padding.left + plotW / 2, height - padding.bottom + 22);
 
       } else if (activeTab === 'rates') {
-        // --- TAB 2: TRAFFIC RATES ---
+        // --- PESTAÑA 2: FLUJOS DE ENTRADA \sum q_{ki}(t, 1), SALIDA r(z) Y DESCARTES ---
         const history = state.history;
         const maxRateY = Math.max(state.server.epsilon * 1.35, ...history.map((h) => Math.max(h.inflow, h.totalDemand))) + 8;
 
-        // Draw Inflow q(1) (Sky Blue)
         if (history.length > 1) {
+          // Curva de flujo entrante al servidor q(1) (azul cielo)
           ctx.beginPath();
           history.forEach((pt, i) => {
             const x = padding.left + (plotW / (history.length - 1)) * i;
@@ -188,7 +195,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
           ctx.lineWidth = 2.2;
           ctx.stroke();
 
-          // Draw Processing Rate r(z) (Purple)
+          // Curva de tasa de procesamiento r(z) (púrpura)
           ctx.beginPath();
           history.forEach((pt, i) => {
             const x = padding.left + (plotW / (history.length - 1)) * i;
@@ -200,7 +207,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
           ctx.lineWidth = 2.5;
           ctx.stroke();
 
-          // Draw Dropped Rate (Red)
+          // Curva de tasa de descarte por overflow (rojo)
           ctx.beginPath();
           history.forEach((pt, i) => {
             const x = padding.left + (plotW / (history.length - 1)) * i;
@@ -213,7 +220,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
           ctx.stroke();
         }
 
-        // Asymptote epsilon line across the plot
+        // Asíntota de capacidad máxima de procesamiento \varepsilon
         const epsY = padding.top + plotH * (1 - state.server.epsilon / maxRateY);
         ctx.beginPath();
         ctx.setLineDash([5, 5]);
@@ -224,7 +231,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Epsilon badge placed strictly in RIGHT GUTTER
+        // Etiqueta de \varepsilon en el margen derecho
         const epsBadgeX = plotRight + 8;
         ctx.beginPath();
         ctx.roundRect(epsBadgeX, epsY - 10, 96, 20, 4);
@@ -239,7 +246,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.textAlign = 'center';
         ctx.fillText(`ε: ${state.server.epsilon} paq/s`, epsBadgeX + 48, epsY + 4);
 
-        // Y-axis labels
+        // Etiquetas de ejes
         ctx.fillStyle = '#94a3b8';
         ctx.font = '600 11px ui-monospace, SFMono-Regular, monospace';
         ctx.textAlign = 'right';
@@ -252,12 +259,12 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.fillText('Tiempo de simulación (ventana de 18s) →', padding.left + plotW / 2, height - padding.bottom + 22);
 
       } else if (activeTab === 'saturation') {
-        // --- TAB 3: SATURATION CURVE r(z) ---
+        // --- PESTAÑA 3: CURVA DE SATURACIÓN NO LINEAL r(z) = \varepsilon z / (1 + z) ---
         const eps = state.server.epsilon;
         const maxZ = SERVER_MAX_BUFFER;
         const maxR = eps * 1.15;
 
-        // Asymptote epsilon line across the plot
+        // Línea de asíntota horizontal \varepsilon
         const epsY = padding.top + plotH * (1 - eps / maxR);
         ctx.beginPath();
         ctx.setLineDash([5, 5]);
@@ -268,7 +275,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Asymptote badge in RIGHT GUTTER
+        // Etiqueta de asíntota en el margen derecho
         const satBadgeX = plotRight + 8;
         ctx.beginPath();
         ctx.roundRect(satBadgeX, epsY - 10, 96, 20, 4);
@@ -283,7 +290,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.textAlign = 'center';
         ctx.fillText(`ε: ${eps} paq/s`, satBadgeX + 48, epsY + 4);
 
-        // Draw theoretical r(z) curve
+        // Trazo de la curva teórica r(z)
         ctx.beginPath();
         const steps = 100;
         for (let s = 0; s <= steps; s++) {
@@ -298,13 +305,12 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.lineWidth = 2.5;
         ctx.stroke();
 
-        // Current Operating Point (z_current, r_current)
+        // Punto de operación actual (z(t), r(z(t))) sobre la curva cóncava
         const currentZ = Math.min(maxZ, state.server.buffer);
         const currentR = nonlinearProcessingRate(currentZ, eps);
         const curX = padding.left + (currentZ / maxZ) * plotW;
         const curY = padding.top + plotH * (1 - currentR / maxR);
 
-        // Glowing marker on the curve
         ctx.beginPath();
         ctx.arc(curX, curY, 7, 0, Math.PI * 2);
         ctx.fillStyle = state.server.isBottleneck ? '#ef4444' : '#10b981';
@@ -313,7 +319,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Clean crosshair projection lines to axes
+        // Líneas de proyección hacia los ejes coordenados
         ctx.beginPath();
         ctx.setLineDash([3, 3]);
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
@@ -325,7 +331,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Axis labels
+        // Etiquetas de ejes
         ctx.fillStyle = '#94a3b8';
         ctx.font = '600 11px ui-monospace, SFMono-Regular, monospace';
         ctx.textAlign = 'right';
@@ -341,7 +347,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.fillText('Búfer acumulado z [paquetes] →', padding.left + plotW / 2, height - padding.bottom + 22);
 
       } else if (activeTab === 'spatial') {
-        // --- TAB 4: PDE SPATIAL DENSITY q(x) ---
+        // --- PESTAÑA 4: PERFIL ESPACIAL PDE q_{ki}(t, x) EN LAS N LÍNEAS ---
         const maxQ = Math.max(40, ...state.gateways.flatMap((g) => g.spatialQ)) + 5;
 
         state.gateways.forEach((g, gIdx) => {
@@ -360,7 +366,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
           ctx.stroke();
         });
 
-        // X-axis endpoints
+        // Etiquetas de las fronteras x = 0 y x = 1
         ctx.fillStyle = '#cbd5e1';
         ctx.font = '600 11px system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'left';
@@ -373,7 +379,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         ctx.textAlign = 'center';
         ctx.fillText('Coordenada espacial normalizada x ∈ [0, 1] →', padding.left + plotW / 2, height - padding.bottom + 22);
 
-        // Y-axis labels
+        // Etiquetas del eje Y
         ctx.fillStyle = '#94a3b8';
         ctx.font = '600 11px ui-monospace, SFMono-Regular, monospace';
         ctx.textAlign = 'right';
@@ -394,10 +400,10 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
 
   return (
     <div className="w-full bg-slate-950 rounded-xl border border-slate-800 shadow-xl overflow-hidden flex flex-col">
-      {/* Top Navigation Tabs (NO EMOJIS, rendered math expressions) & Reactive Legend */}
+      {/* Barra Superior de Pestañas de Gráficas y Leyenda Reactiva */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between border-b border-slate-800 px-4 py-3 bg-slate-900/70 gap-3">
         <div className="flex items-center gap-1.5 flex-wrap">
-          {/* Tab 1: Buffer */}
+          {/* Pestaña 1: Búfer */}
           <button
             onClick={() => setActiveTab('buffer')}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
@@ -412,7 +418,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
             <MathBlock math="z^*" className="text-white" />
           </button>
 
-          {/* Tab 2: Rates */}
+          {/* Pestaña 2: Flujos */}
           <button
             onClick={() => setActiveTab('rates')}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
@@ -424,7 +430,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
             <span>Flujos de Entrada y Salida</span>
           </button>
 
-          {/* Tab 3: Saturation */}
+          {/* Pestaña 3: Saturación */}
           <button
             onClick={() => setActiveTab('saturation')}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
@@ -437,7 +443,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
             <MathBlock math="r(z)" className="text-white" />
           </button>
 
-          {/* Tab 4: Spatial */}
+          {/* Pestaña 4: Perfil Espacial PDE */}
           <button
             onClick={() => setActiveTab('spatial')}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
@@ -451,7 +457,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
           </button>
         </div>
 
-        {/* Dynamic Metric Badges in Header with Rendered KaTeX (No emojis, no raw underscores!) */}
+        {/* Insignias Dinámicas con Expresiones KaTeX en Tiempo Real */}
         <div className="flex items-center gap-2 flex-wrap text-xs font-mono">
           {activeTab === 'buffer' && (
             <>
@@ -463,7 +469,9 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
 
               <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-sky-950/80 border border-sky-800/60 text-sky-300">
                 <MathBlock math="z^*_{\text{eq}}:" />
-                <span className="font-bold">{state.server.zEquilibrium.toFixed(1)} paq</span>
+                <span className="font-bold">
+                  {state.server.isEquilibriumFinite ? `${state.server.zEquilibrium.toFixed(1)} paq` : '∞ (Inestable)'}
+                </span>
               </div>
 
               <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-rose-950/80 border border-rose-800/60 text-rose-300">
@@ -519,7 +527,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
               {state.gateways.map((g, i) => (
                 <div key={g.id} className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-slate-300">
                   <MathBlock math={`q_{${i + 1}}(0):`} />
-                  <span className="font-bold">{g.demand.toFixed(0)} paq/s</span>
+                  <span className="font-bold">{(g.spatialQ[0] || g.demand).toFixed(1)} paq/s</span>
                 </div>
               ))}
             </>
@@ -527,7 +535,7 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
         </div>
       </div>
 
-      {/* Spacious Canvas Plot */}
+      {/* Lienzo de Gráfica */}
       <div className="w-full h-72 lg:h-80 relative">
         <canvas ref={chartCanvasRef} className="w-full h-full block" />
       </div>

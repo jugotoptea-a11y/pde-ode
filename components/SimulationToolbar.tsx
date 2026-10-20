@@ -4,6 +4,7 @@ import React from 'react';
 import { SimulationMode } from '@/lib/types';
 import { Play, Pause, RotateCcw, AlertTriangle, ShieldCheck, Server, Network } from 'lucide-react';
 
+// Propiedades de la barra de herramientas global de la simulación
 interface SimulationToolbarProps {
   mode: SimulationMode;
   onToggleMode: (mode: SimulationMode) => void;
@@ -18,6 +19,11 @@ interface SimulationToolbarProps {
   onChangeSimSpeed: (speed: number) => void;
 }
 
+/**
+ * Barra de control principal para alternar entre el Modo No Optimizado (FIFO) y el
+ * Modo Optimizado (Control ISS Cero DesBorde), configurar la topología de N Gateways
+ * y ajustar la capacidad asintótica de procesamiento del servidor (\varepsilon).
+ */
 export function SimulationToolbar({
   mode,
   onToggleMode,
@@ -33,7 +39,7 @@ export function SimulationToolbar({
 }: SimulationToolbarProps) {
   return (
     <div className="bg-slate-900/95 border border-slate-800 rounded-xl p-4 shadow-xl flex flex-col gap-4">
-      {/* Top Row: Mode Selector (Optimized vs Unoptimized) */}
+      {/* Fila Superior: Selector de Modalidad de Control (Optimizado ISS vs No Optimizado FIFO) */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -42,7 +48,7 @@ export function SimulationToolbar({
         </div>
 
         <div className="grid grid-cols-2 gap-2 flex-1 max-w-xl">
-          {/* Unoptimized Button */}
+          {/* Botón Modo No Optimizado */}
           <button
             onClick={() => onToggleMode('unoptimized')}
             className={`flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all border ${mode === 'unoptimized'
@@ -57,7 +63,7 @@ export function SimulationToolbar({
             </div>
           </button>
 
-          {/* Optimized Button */}
+          {/* Botón Modo Optimizado */}
           <button
             onClick={() => onToggleMode('optimized')}
             className={`flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all border ${mode === 'optimized'
@@ -73,7 +79,7 @@ export function SimulationToolbar({
           </button>
         </div>
 
-        {/* Play / Pause / Reset Controls */}
+        {/* Controles de Ejecución (Pausar / Reanudar / Reiniciar / Velocidad) */}
         <div className="flex items-center gap-2 self-end lg:self-auto">
           <button
             onClick={onTogglePlayPause}
@@ -101,7 +107,7 @@ export function SimulationToolbar({
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
 
-          {/* Speed selector */}
+          {/* Selector de multiplicador de velocidad temporal */}
           <div className="flex items-center bg-slate-800/90 rounded-lg p-0.5 border border-slate-700 text-[11px] font-mono">
             {[0.5, 1, 2, 4].map((spd) => (
               <button
@@ -117,9 +123,9 @@ export function SimulationToolbar({
         </div>
       </div>
 
-      {/* Bottom Row: Topology (Number of Gateways) & Server Epsilon (Processing Capacity) */}
+      {/* Fila Inferior: Configuración de Topología (N Gateways) y Capacidad del Servidor (\varepsilon) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Gateway Count Selector */}
+        {/* Selector de Cantidad de Gateways / Líneas de Transmisión PDE */}
         <div className="flex flex-col gap-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
           <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-slate-200 flex items-center gap-1.5">
@@ -147,7 +153,7 @@ export function SimulationToolbar({
           </div>
         </div>
 
-        {/* Server Max Processing Capacity (Epsilon) Slider */}
+        {/* Control Deslizante de Capacidad Asintótica de Procesamiento del Servidor (\varepsilon) */}
         <div className="flex flex-col gap-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
           <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-slate-200 flex items-center gap-1.5">

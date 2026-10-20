@@ -9,6 +9,7 @@ import {
 import { CloudRain, Waves, Zap, Layers, ShieldCheck } from 'lucide-react';
 import { MathBlock } from './MathBlock';
 
+// Propiedades del panel de control ambiental e hidrológico por cada Gateway
 interface EnvironmentalControlsProps {
   gateways: GatewayNodeState[];
   selectedGatewayIndex: number;
@@ -19,6 +20,11 @@ interface EnvironmentalControlsProps {
   onTriggerSpike: (index: number) => void;
 }
 
+/**
+ * Panel interactivo de telemetría ambiental por nodo.
+ * Permite ajustar la precipitación pluvial P [mm] y el par hidrodinámico acoplado (Caudal Q, Velocidad v)
+ * para cada estación concentradora (Gateway IoT), o disparar avalanchas repentinas.
+ */
 export function EnvironmentalControls({
   gateways,
   selectedGatewayIndex,
@@ -32,7 +38,7 @@ export function EnvironmentalControls({
 
   return (
     <div className="bg-slate-900/90 rounded-xl border border-slate-800 p-4 shadow-xl flex flex-col gap-4">
-      {/* Top Header & Selected Gateway Target for Presets */}
+      {/* Encabezado Superior e Indicador de Nodo Seleccionado */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
         <div>
           <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2 flex-wrap">
@@ -45,11 +51,11 @@ export function EnvironmentalControls({
             </span>
           </h3>
           <p className="text-xs text-slate-400 mt-1 max-w-3xl">
-            Cada sensor genera una lectura local de ~20 B. El Gateway consolida las mediciones en un único paquete JSON de ~119 B (-25% peaje de red), descartando transmisiones directas innecesarias del orden de megabytes.
+            Cada sensor genera una lectura local de ~20 B. El Gateway consolida las mediciones en un único paquete JSON de ~119 B (-24.7% peaje de red), descartando transmisiones directas innecesarias del orden de megabytes.
           </p>
         </div>
 
-        {/* Selected Gateway Target Indicator */}
+        {/* Indicador visual del Gateway objetivo para los escenarios rápidos */}
         <div className="flex items-center gap-2 bg-slate-950/90 px-3 py-1.5 rounded-lg border border-slate-800 text-xs">
           <span className="text-slate-400 text-[11px]">Nodo Objetivo:</span>
           <span className="font-bold text-sky-300 flex items-center gap-1">
@@ -59,7 +65,7 @@ export function EnvironmentalControls({
         </div>
       </div>
 
-      {/* Meteorological Scenario Bar - Applied to Selected Gateway */}
+      {/* Barra de Escenarios Hidrometeorológicos Preconfigurados */}
       <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs text-slate-300">
           <Layers className="w-4 h-4 text-sky-400 shrink-0" />
@@ -115,7 +121,7 @@ export function EnvironmentalControls({
         </div>
       </div>
 
-      {/* Grid of Gateway Telemetry Cards (Side-by-Side) */}
+      {/* Cuadrícula de Tarjetas de Telemetría por cada Gateway k ∈ {1, ..., N} */}
       <div className={`grid gap-4 ${
         gateways.length === 1
           ? 'grid-cols-1'
@@ -140,7 +146,7 @@ export function EnvironmentalControls({
                   : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
               }`}
             >
-              {/* Card Header */}
+              {/* Encabezado de la Tarjeta del Gateway y Demanda d_k(t) */}
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                 <div className="flex items-center gap-2">
                   <span className={`w-2.5 h-2.5 rounded-full ${isSelected ? 'bg-sky-400 animate-pulse' : 'bg-slate-600'}`} />
@@ -157,7 +163,7 @@ export function EnvironmentalControls({
                   </div>
                 </div>
 
-                {/* Total Demand Tag */}
+                {/* Etiqueta de Demanda d_k(t) en paq/s y kB/s */}
                 <div className="text-right">
                   <span className="text-[9px] text-slate-400 flex items-center justify-end gap-1">
                     <span>Flujo</span>
@@ -172,7 +178,7 @@ export function EnvironmentalControls({
                 </div>
               </div>
 
-              {/* Sensor 1: Pluviómetro (Precipitación mm) */}
+              {/* Sensor 1: Pluviómetro (Precipitación en mm) */}
               <div className="flex flex-col gap-1 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/60">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-300 flex items-center gap-1.5 text-[11px] font-semibold">
@@ -207,7 +213,7 @@ export function EnvironmentalControls({
                 </div>
               </div>
 
-              {/* Sensor 2: Sensor de Agua (Caudal Q y Velocidad v acoplados) */}
+              {/* Sensor 2: Sensor de Agua (Caudal Q y Velocidad v acoplados de la tabla de 60 pares) */}
               <div className="flex flex-col gap-1.5 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/60">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-300 flex items-center gap-1.5 text-[11px] font-semibold">
@@ -219,7 +225,7 @@ export function EnvironmentalControls({
                   </span>
                 </div>
 
-                {/* Display of Coupled Pair Values */}
+                {/* Visualización del Par Acoplado (Q, v) */}
                 <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded border border-slate-800 text-center font-mono">
                   <div>
                     <span className="text-[9px] text-slate-400 block">Caudal Q</span>
@@ -235,7 +241,7 @@ export function EnvironmentalControls({
                   </div>
                 </div>
 
-                {/* Slider for empirical hydraulic index */}
+                {/* Control deslizante del índice empírico [0 - 59] */}
                 <input
                   type="range"
                   min="0"
@@ -261,7 +267,7 @@ export function EnvironmentalControls({
                 </div>
               </div>
 
-              {/* Local Sensor Telemetry & Gateway JSON Aggregation */}
+              {/* Resumen de Telemetría Local y Empaquetado JSON en el Gateway */}
               <div className="bg-slate-900/90 rounded-lg p-2 border border-slate-800/80 flex flex-col gap-1 text-[11px]">
                 <div className="flex items-center justify-between text-slate-300">
                   <span className="flex items-center gap-1 text-[10px] text-slate-400">
@@ -285,12 +291,12 @@ export function EnvironmentalControls({
                     <ShieldCheck className="w-3 h-3 text-emerald-400" /> Paquete Unificado Gateway:
                   </span>
                   <span className="font-mono text-emerald-300 font-bold">
-                    ~119 B / viaje (-25%)
+                    ~119 B / viaje (-24.7%)
                   </span>
                 </div>
               </div>
 
-              {/* Node Spike Trigger Button */}
+              {/* Botón para disparar pico de crecida súbita en este canal */}
               <button
                 type="button"
                 onClick={(e) => {

@@ -27,16 +27,23 @@ import {
   Cpu,
 } from 'lucide-react';
 
+// Secciones disponibles en la navegación del dashboard
 type ActiveSection = 'simulation' | 'charts' | 'formulas' | 'all';
 
+/**
+ * Vista principal del Dashboard Interactivo "Cero DesBorde: Simulación Híbrida PDE–ODE".
+ * Gestiona el ciclo de integración numérica en tiempo real (~60 FPS en motor, ~15 FPS en UI),
+ * la topología de N Gateways y los escenarios hidrometeorológicos.
+ */
 export default function Home() {
+  // Estado global de la simulación (inicia con 3 Gateways en Modo Optimizado ISS)
   const [state, setState] = useState<SimulationState>(() => createInitialState(3, 'optimized'));
   const [isRunning, setIsRunning] = useState<boolean>(true);
   const [simSpeed, setSimSpeed] = useState<number>(1);
   const [selectedGatewayIndex, setSelectedGatewayIndex] = useState<number>(0);
   const [activeSection, setActiveSection] = useState<ActiveSection>('simulation');
 
-  // Use a ref for the mutable simulation state to keep engine smooth
+  // Referencia mutable para avanzar el motor físico de forma fluida en requestAnimationFrame
   const stateRef = useRef<SimulationState>(state);
   useEffect(() => {
     stateRef.current = state;
@@ -45,7 +52,8 @@ export default function Home() {
   const lastFrameTimeRef = useRef<number>(0);
   const lastUiUpdateRef = useRef<number>(0);
 
-  // Simulation Loop with UI throttling (~15 FPS) to keep numbers sharp and avoid font blur
+  // Bucle principal de integración numérica PDE-ODE con limitación de refresco DOM (~15 FPS)
+  // para mantener nitidez tipográfica en las cifras en vivo
   useEffect(() => {
     let animId: number;
 
@@ -54,13 +62,12 @@ export default function Home() {
       lastFrameTimeRef.current = currentTime;
 
       if (isRunning && deltaMs > 0) {
-        // Cap dt to prevent massive jumps when tab is inactive
+        // Acotar el paso dt para evitar saltos bruscos si la pestaña estuvo en segundo plano
         const dt = Math.min(0.08, (deltaMs / 1000) * simSpeed);
         const nextState = stepSimulation(stateRef.current, dt);
         stateRef.current = nextState;
 
-        // Throttle React state updates to ~15 FPS (~65ms)
-        // This eliminates DOM font blur while keeping numbers crisp and responsive
+        // Actualizar el estado de React cada ~65 ms (~15 FPS)
         if (currentTime - lastUiUpdateRef.current >= 65) {
           lastUiUpdateRef.current = currentTime;
           setState(nextState);
@@ -79,12 +86,11 @@ export default function Home() {
     };
   }, [isRunning, simSpeed]);
 
-  // Handler: Toggle Mode (Optimized vs Unoptimized) - Resets simulation to initial conditions
+  // Manejador: Alternar modalidad de control (Optimizado ISS vs No Optimizado FIFO)
   const handleToggleMode = useCallback((newMode: SimulationMode) => {
     setState((prev) => {
-      // Re-initialize state from clean initial conditions with the selected mode
+      // Reinicializar desde condiciones limpias preservando el número de Gateways y la capacidad \varepsilon
       const next = createInitialState(prev.numGateways, newMode);
-      // Preserve current user-configured server capacity epsilon
       next.serverEpsilon = prev.serverEpsilon;
       next.server.epsilon = prev.serverEpsilon;
       next.server.epsilonKBS = Number(((prev.serverEpsilon * 119) / 1000).toFixed(2));
@@ -96,19 +102,20 @@ export default function Home() {
     });
   }, []);
 
-  // Handler: Change Number of Gateways (1 to 4)
+  // Manejador: Cambiar la cantidad de Gateways / Líneas de Transmisión PDE (1 a 4)
   const handleChangeNumGateways = useCallback((count: number) => {
     setState((prev) => {
       const next = createInitialState(count, prev.mode);
       next.serverEpsilon = prev.serverEpsilon;
       next.server.epsilon = prev.serverEpsilon;
+      next.server.epsilonKBS = Number(((prev.serverEpsilon * 119) / 1000).toFixed(2));
       stateRef.current = next;
       return next;
     });
     setSelectedGatewayIndex(0);
   }, []);
 
-  // Handler: Change Server Max Processing Capacity (Epsilon)
+  // Manejador: Modificar la capacidad máxima asintótica de procesamiento del Servidor (\varepsilon)
   const handleChangeServerEpsilon = useCallback((newEpsilon: number) => {
     setState((prev) => {
       const next = {
@@ -117,6 +124,7 @@ export default function Home() {
         server: {
           ...prev.server,
           epsilon: newEpsilon,
+          epsilonKBS: Number(((newEpsilon * 119) / 1000).toFixed(2)),
         },
       };
       stateRef.current = next;
@@ -124,7 +132,7 @@ export default function Home() {
     });
   }, []);
 
-  // Handler: Update Gateway Environment - ISOLATED PER NODE
+  // Manejador: Actualizar condiciones hidrometeorológicas de un Gateway específico
   const handleUpdateGatewayEnvironment = useCallback((gwIndex: number, newEnv: EnvironmentalState) => {
     if (stateRef.current && stateRef.current.gateways && stateRef.current.gateways[gwIndex]) {
       const telemetry = computeSensorTelemetry(newEnv);
@@ -156,7 +164,7 @@ export default function Home() {
     });
   }, []);
 
-  // Handler: Apply Weather Preset ONLY to the currently selected gateway
+  // Manejador: Aplicar escenario meteorológico únicamente al Gateway seleccionado actualmente
   const handleApplyPresetToSelected = useCallback((preset: WeatherPreset) => {
     const newEnv = createInitialEnvironmentalState(preset);
     const targetIdx = selectedGatewayIndex;
@@ -191,7 +199,7 @@ export default function Home() {
     });
   }, [selectedGatewayIndex]);
 
-  // Handler: Optional Apply Weather Preset to all gateways
+  // Manejador: Aplicar escenario meteorológico simultáneamente a todos los Gateways
   const handleApplyPresetToAll = useCallback((preset: WeatherPreset) => {
     const newEnv = createInitialEnvironmentalState(preset);
     if (stateRef.current && stateRef.current.gateways) {
@@ -223,7 +231,7 @@ export default function Home() {
     });
   }, []);
 
-  // Handler: Trigger Sudden Flood Spike in a single gateway
+  // Manejador: Disparar pico súbito de crecida extrema en un Gateway individual
   const handleTriggerSpike = useCallback((gwIndex: number) => {
     const spikedEnv = createInitialEnvironmentalState('extreme_flood');
 
@@ -257,18 +265,19 @@ export default function Home() {
     });
   }, []);
 
-  // Handler: Reset Simulation
+  // Manejador: Reiniciar la simulación a las condiciones iniciales
   const handleReset = useCallback(() => {
     const fresh = createInitialState(stateRef.current.numGateways, stateRef.current.mode);
     fresh.serverEpsilon = stateRef.current.serverEpsilon;
     fresh.server.epsilon = stateRef.current.serverEpsilon;
+    fresh.server.epsilonKBS = Number(((stateRef.current.serverEpsilon * 119) / 1000).toFixed(2));
     stateRef.current = fresh;
     setState(fresh);
   }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
-      {/* Top Header - Sober & Minimalist */}
+      {/* Encabezado Superior Institucional */}
       <header className="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur sticky top-0 z-30 px-4 lg:px-8 py-3.5 shadow-md">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
           <div>
@@ -285,7 +294,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
               <div className="text-xs font-semibold text-slate-300">
-                Grupo 24382
+                Grupo 24392
               </div>
               <div className="text-[11px] text-slate-400">
                 G. Arenas, S. Barrios, J. Estrada, L. Mendoza
@@ -312,7 +321,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Structured Section Navigation Bar */}
+      {/* Barra de Navegación por Secciones */}
       <div className="border-b border-slate-800 bg-slate-900/60 sticky top-15 z-20 px-4 lg:px-8">
         <div className="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto py-2">
           <div className="flex items-center gap-2">
@@ -366,9 +375,9 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Main Container */}
+      {/* Contenedor Principal del Dashboard */}
       <main className="max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 flex flex-col gap-8 flex-1">
-        {/* Global Toolbar and KPIs (Always accessible) */}
+        {/* Barra de Herramientas y Métricas Globales (siempre visibles) */}
         <div className="flex flex-col gap-4">
           <SimulationToolbar
             mode={state.mode}
@@ -387,7 +396,7 @@ export default function Home() {
           <PerformanceMetrics state={state} />
         </div>
 
-        {/* SECTION 1: SIMULACIÓN */}
+        {/* SECCIÓN 1: SIMULACIÓN Y TOPOLOGÍA */}
         {(activeSection === 'simulation' || activeSection === 'all') && (
           <section className="flex flex-col gap-5 pt-2">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -400,7 +409,7 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Interactive Visual Network Canvas */}
+            {/* Lienzo Visual de la Red PDE-ODE */}
             <div className="w-full h-100 lg:h-115">
               <NetworkCanvas
                 state={state}
@@ -409,7 +418,7 @@ export default function Home() {
               />
             </div>
 
-            {/* Environmental Controls per Gateway Node (Isolated & Scenario binds to selected) */}
+            {/* Controles Ambientales e Hidrológicos por Nodo */}
             <EnvironmentalControls
               gateways={state.gateways}
               selectedGatewayIndex={selectedGatewayIndex}
@@ -422,7 +431,7 @@ export default function Home() {
           </section>
         )}
 
-        {/* SECTION 2: GRÁFICAS Y ANÁLISIS */}
+        {/* SECCIÓN 2: GRÁFICAS Y ANÁLISIS EN TIEMPO REAL */}
         {(activeSection === 'charts' || activeSection === 'all') && (
           <section className="flex flex-col gap-5 pt-2">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -435,12 +444,12 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Real-time Analytical Charts Canvas */}
+            {/* Gráficas Analíticas en Tiempo Real */}
             <RealTimeCharts state={state} />
 
-            {/* Telemetry Summary & Bandwidth Savings Grid */}
+            {/* Tarjetas de Resumen Técnico y Ahorro de Ancho de Banda */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Card 1: Bandwidth Savings Metric */}
+              {/* Tarjeta 1: Ahorro por Consolidación en Gateway */}
               <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-xs text-slate-400">
                   <span>Ahorro Consolidación Gateway</span>
@@ -459,7 +468,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Card 2: Physical Queue Limit */}
+              {/* Tarjeta 2: Escala Real Física del Búfer del Servidor */}
               <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-xs text-slate-400">
                   <span>Escala Real de Búfer Servidor</span>
@@ -478,7 +487,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Card 3: Processing Status */}
+              {/* Tarjeta 3: Caudal de Procesamiento (Throughput) */}
               <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-xs text-slate-400">
                   <span>Throughput Servidor</span>
@@ -500,7 +509,7 @@ export default function Home() {
           </section>
         )}
 
-        {/* SECTION 3: FÓRMULAS Y FUNDAMENTOS MATEMÁTICOS */}
+        {/* SECCIÓN 3: FÓRMULAS Y FUNDAMENTOS MATEMÁTICOS */}
         {(activeSection === 'formulas' || activeSection === 'all') && (
           <section className="flex flex-col gap-5 pt-2">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -509,17 +518,17 @@ export default function Home() {
                 <span>Sección 3: Formulación Matemática PDE–ODE y Modelo Hidrológico</span>
               </h2>
               <span className="text-xs text-slate-400 font-mono">
-                Ecuaciones de Lighthill-Whitham-Richards &amp; Colas Acopladas
+                Ecuaciones de Ondas Cinemáticas &amp; Colas Continuas Acopladas
               </span>
             </div>
 
-            {/* Deep Mathematical Component */}
+            {/* Componente de Fundamentación Matemática */}
             <MathematicalReference />
           </section>
         )}
       </main>
 
-      {/* Minimalist Footer */}
+      {/* Pie de Página */}
       <footer className="border-t border-slate-900 bg-slate-950 py-4 px-4 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
