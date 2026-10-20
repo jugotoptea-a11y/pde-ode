@@ -112,13 +112,31 @@ export function getFlowVelocityPair(index: number): FlowVelocityPair {
   return EMPIRICAL_FLOW_SPEED_PAIRS[safeIdx];
 }
 
-// Ubicaciones por defecto de las pasarelas concentradoras (Gateways IoT):
+// Ubicaciones, distancias físicas L_k y velocidades efectivas heterogéneas de los Gateways IoT LoRa (Nivel 1):
+// Todos los nodos transmiten mediante tecnología LoRa, donde la velocidad efectiva \lambda_k = v_{LoRa,k} / L_k [s⁻¹]
+// y el retardo de tránsito (Time-on-Air + propagación) \tau_k = 1/\lambda_k [s] dependen de la distancia física L_k
+// y del Factor de Dispersión asignado (Spreading Factor: SF7 a SF10):
 export const DEFAULT_GATEWAY_LOCATIONS = [
-  { name: 'Gateway 1', location: 'Canal Primario - Estación de Telemetría 1' },
-  { name: 'Gateway 2', location: 'Canal Secundario - Estación de Telemetría 2' },
-  { name: 'Gateway 3', location: 'Colector Auxiliar - Estación de Telemetría 3' },
-  { name: 'Gateway 4', location: 'Colector de Alivio - Estación de Telemetría 4' },
+  { name: 'Gateway 1', location: 'Canal Primario - Estación Cercana', distanceKm: 1.2, loraSF: 'SF7', lambda: 2.4 },    // \tau_1 ≈ 0.417 s
+  { name: 'Gateway 2', location: 'Canal Secundario - Estación Media', distanceKm: 2.5, loraSF: 'SF8', lambda: 1.8 },    // \tau_2 ≈ 0.556 s
+  { name: 'Gateway 3', location: 'Colector Auxiliar - Estación Urbana', distanceKm: 3.8, loraSF: 'SF9', lambda: 1.25 }, // \tau_3 = 0.800 s
+  { name: 'Gateway 4', location: 'Colector de Alivio - Cuenca Alta', distanceKm: 5.5, loraSF: 'SF10', lambda: 0.90 },   // \tau_4 ≈ 1.111 s
 ];
+
+/**
+ * Estima la distancia física equivalente L_k [km] y el Factor de Dispersión LoRa (SF7–SF12)
+ * correspondiente a una velocidad efectiva normalizada \lambda_k [s⁻¹].
+ */
+export function deriveLoRaParamsFromLambda(lambda: number): { distanceKm: number; loraSF: string } {
+  const distanceKm = Number(Math.max(0.5, Math.min(8.5, 4.9 / Math.max(0.4, lambda) - 0.55)).toFixed(1));
+  let loraSF = 'SF7';
+  if (lambda >= 2.1) loraSF = 'SF7';
+  else if (lambda >= 1.55) loraSF = 'SF8';
+  else if (lambda >= 1.1) loraSF = 'SF9';
+  else if (lambda >= 0.75) loraSF = 'SF10';
+  else loraSF = 'SF11';
+  return { distanceKm, loraSF };
+}
 
 /**
  * Crea el estado ambiental inicial según el escenario meteorológico seleccionado.
@@ -206,13 +224,9 @@ export function nonlinearProcessingRate(z: number, epsilon: number): number {
 }
 
 /**
- * Cálculo analítico exacto del punto de equilibrio estacionario z* bajo reducción escalar
- * (Sección 3.1, Pasos 10 a 16 del informe):
+ * Cálculo analítico exacto del punto de equilibrio estacionario z* bajo reducción escalar homogénea:
  *   0 = w*d + w*u * r(z*) - r(z*)  ==>  w*d = (1 - w*u) * (\varepsilon * z*) / (1 + z*)
  *   z* = (w * d) / [(1 - w * u) * \varepsilon - w * d]
- *
- * Condición analítica de existencia física y estabilidad (No Desborde):
- *   w * d < (1 - w * u) * \varepsilon
  */
 export function calculateEquilibrium(
   w: number,
@@ -220,14 +234,10 @@ export function calculateEquilibrium(
   d: number,
   epsilon: number
 ): { zStar: number; isStable: number; maxAdmissibleDemand: number } {
-  // Capacidad efectiva neta del servidor descontando la fracción de recirculación/enrutamiento wu
   const netCapacity = (1 - w * u) * epsilon;
-  // Denominador del equilibrio algebraico: Margen dinámico de estabilidad M_s = (1 - wu)\varepsilon - wd
   const denominator = netCapacity - w * d;
-  // Cota superior crítica de demanda externa admisible: d_adm = (1 - wu)\varepsilon / w
   const maxAdmissibleDemand = w > 0 ? netCapacity / w : netCapacity;
 
-  // Si el denominador no es estrictamente positivo, se viola wd < (1 - wu)\varepsilon y la cola diverge a infinito
   if (denominator <= 0.001) {
     return {
       zStar: Infinity,
@@ -245,14 +255,70 @@ export function calculateEquilibrium(
 }
 
 /**
- * Construye el estado inicial completo del sistema para N Gateways (líneas PDE) y el Servidor Central.
+ * Cálculo analítico del punto de equilibrio estacionario z* para la Red en Estrella Heterogénea (Nivel 1):
+ * Cada línea k posee su propia demanda d_k, su factor de admisión w_k, su fracción de enrutamiento u_{ki}
+ * y su retardo de propagación individual \tau_k = 1 / \lambda_k.
+ *
+ * En régimen permanente (dz/dt = 0 y z(t - \tau_k) = z* para todo k):
+ *   \sum_{k=1}^N w_k d_k + (\sum_{k=1}^N w_k u_{ki}) * r(z*) - r(z*) = 0
+ *   ==> r(z*) = (\sum_{k=1}^N w_k d_k) / (1 - \sum_{k=1}^N w_k u_{ki})
+ *
+ * Sustituyendo r(z*) = (\varepsilon * z*) / (1 + z*):
+ *   z* = (\sum_{k=1}^N w_k d_k) / [(1 - \sum_{k=1}^N w_k u_{ki}) * \varepsilon - \sum_{k=1}^N w_k d_k]
+ *
+ * Condición de existencia y Cero Desborde por suma ponderada:
+ *   \sum_{k=1}^N w_k d_k < (1 - \sum_{k=1}^N w_k u_{ki}) * \varepsilon
+ */
+export function calculateHeterogeneousEquilibrium(
+  gateways: Pick<GatewayNodeState, 'w' | 'u' | 'demand'>[],
+  epsilon: number
+): {
+  zStar: number;
+  isStable: number;
+  weightedDemand: number;
+  weightedRouting: number;
+  rStar: number;
+} {
+  // Suma ponderada de demanda externa admitida: D_w = \sum_{k=1}^N w_k * d_k
+  const weightedDemand = gateways.reduce((acc, gw) => acc + gw.w * gw.demand, 0);
+  // Suma ponderada de fracción de enrutamiento efectivo: U_w = \sum_{k=1}^N w_k * u_{ki}
+  const weightedRouting = gateways.reduce((acc, gw) => acc + gw.w * gw.u, 0);
+
+  // Capacidad neta efectiva del servidor: (1 - \sum w_k u_{ki}) * \varepsilon
+  const netCapacity = (1 - weightedRouting) * epsilon;
+  // Denominador del equilibrio heterogéneo: (1 - \sum w_k u_{ki}) * \varepsilon - \sum w_k d_k
+  const denominator = netCapacity - weightedDemand;
+
+  if (1 - weightedRouting <= 0.001 || denominator <= 0.001) {
+    return {
+      zStar: Infinity,
+      isStable: 0,
+      weightedDemand: Number(weightedDemand.toFixed(2)),
+      weightedRouting: Number(weightedRouting.toFixed(3)),
+      rStar: epsilon,
+    };
+  }
+
+  const zStar = weightedDemand / denominator;
+  const rStar = weightedDemand / (1 - weightedRouting);
+
+  return {
+    zStar: Math.max(0, Number(zStar.toFixed(2))),
+    isStable: 1,
+    weightedDemand: Number(weightedDemand.toFixed(2)),
+    weightedRouting: Number(weightedRouting.toFixed(3)),
+    rStar: Number(rStar.toFixed(2)),
+  };
+}
+
+/**
+ * Construye el estado inicial completo del sistema para N Gateways heterogéneos (Nivel 1: \lambda_k y \tau_k distintos)
+ * que convergen en el Servidor Central.
  */
 export function createInitialState(numGateways: number = 3, mode: SimulationMode = 'optimized'): SimulationState {
-  const lambda = DEFAULT_LAMBDA;
-  const tau = Number((1 / lambda).toFixed(3));
   const serverEpsilon = 60; // Capacidad asintótica por defecto del servidor central \varepsilon = 60 paq/s (~7.14 kB/s)
 
-  // Fracción agregada de enrutamiento u = \sum_{k=1}^N u_{ki} = 0.20, repartida homogéneamente entre las N líneas
+  // Fracción agregada de enrutamiento u = \sum_{k=1}^N u_{ki} = 0.20
   const totalU = DEFAULT_ROUTING_U;
   const perLineU = Number((totalU / numGateways).toFixed(3));
 
@@ -263,7 +329,12 @@ export function createInitialState(numGateways: number = 3, mode: SimulationMode
     const loc = DEFAULT_GATEWAY_LOCATIONS[i] || {
       name: `Gateway ${i + 1}`,
       location: `Estación Auxiliar ${i + 1}`,
+      distanceKm: 2.5,
+      loraSF: 'SF8',
+      lambda: DEFAULT_LAMBDA,
     };
+    const lineLambda = loc.lambda;
+    const lineTau = Number((1 / lineLambda).toFixed(3));
     const env = createInitialEnvironmentalState('dry');
     const telemetry = computeSensorTelemetry(env);
 
@@ -279,16 +350,20 @@ export function createInitialState(numGateways: number = 3, mode: SimulationMode
       id: `gw-${i + 1}`,
       name: loc.name,
       location: loc.location,
+      distanceKm: loc.distanceKm, // Distancia física L_k [km]
+      loraSF: loc.loraSF,         // Factor de Dispersión LoRa (SF7 a SF10)
       environment: env,
       sensors: {
         rainSensor: telemetry.rainSensor,
         waterSensor: telemetry.waterSensor,
       },
-      buffer: 1.5, // Ocupación inicial ligera del búfer local del Gateway [paq]
+      lambda: lineLambda, // Velocidad de propagación individual \lambda_k [s⁻¹]
+      tau: lineTau,       // Retardo de propagación individual \tau_k = 1/\lambda_k [s]
+      buffer: 1.5,        // Ocupación inicial ligera del búfer local del Gateway [paq]
       bufferCapacity: GATEWAY_MAX_BUFFER,
-      epsilon: 90.0, // Capacidad holgada de empaquetado del Gateway IoT
+      epsilon: 90.0,      // Capacidad holgada de empaquetado del Gateway IoT
       w: 1.0,
-      u: perLineU,   // Fracción de enrutamiento individual u_{ki} = u / N
+      u: perLineU,        // Fracción de enrutamiento inicial u_{ki}
       demand: effectiveDemand,
       demandKBS: Number(((effectiveDemand * UNIFIED_PACKET_BYTES) / 1000).toFixed(2)),
       outflow: effectiveDemand,
@@ -299,8 +374,12 @@ export function createInitialState(numGateways: number = 3, mode: SimulationMode
     });
   }
 
-  // Cálculo del punto de equilibrio inicial z* para inicializar el servidor de forma consistente
-  const initialEq = calculateEquilibrium(1.0, totalU, initialTotalDemand, serverEpsilon);
+  // Promedio de velocidades y retardos para referencia global
+  const avgLambda = Number((gateways.reduce((s, g) => s + g.lambda, 0) / numGateways).toFixed(2));
+  const avgTau = Number((gateways.reduce((s, g) => s + g.tau, 0) / numGateways).toFixed(3));
+
+  // Cálculo del punto de equilibrio inicial z* mediante suma ponderada heterogénea (Nivel 1)
+  const initialEq = calculateHeterogeneousEquilibrium(gateways, serverEpsilon);
   const initialBuffer = Number.isFinite(initialEq.zStar) ? Math.min(SERVER_MAX_BUFFER, initialEq.zStar) : 6.0;
   const initialR = nonlinearProcessingRate(initialBuffer, serverEpsilon);
 
@@ -311,14 +390,14 @@ export function createInitialState(numGateways: number = 3, mode: SimulationMode
   });
 
   const serverEpsKBS = Number(((serverEpsilon * UNIFIED_PACKET_BYTES) / 1000).toFixed(2));
-  const initialInflow = initialTotalDemand + totalU * initialR;
+  const initialInflow = initialEq.weightedDemand + initialEq.weightedRouting * initialR;
 
   return {
     time: 0,
     mode,
     numGateways,
-    lambda,
-    tau,
+    lambda: avgLambda,
+    tau: avgTau,
     serverEpsilon,
     gateways,
     server: {
@@ -329,6 +408,8 @@ export function createInitialState(numGateways: number = 3, mode: SimulationMode
       epsilonKBS: serverEpsKBS,
       w: 1.0,
       u: totalU,
+      weightedDemand: initialEq.weightedDemand,
+      weightedRouting: initialEq.weightedRouting,
       inflow: Number(initialInflow.toFixed(1)),
       inflowKBS: Number(((initialInflow * UNIFIED_PACKET_BYTES) / 1000).toFixed(2)),
       processingRate: Number(initialR.toFixed(1)),
@@ -350,12 +431,15 @@ export function createInitialState(numGateways: number = 3, mode: SimulationMode
 }
 
 /**
- * Avanza la simulación híbrida PDE-ODE un paso temporal dt [segundos].
+ * Avanza la simulación híbrida PDE-ODE en Configuración Heterogénea (Nivel 1) un paso temporal dt [segundos].
  * Integra:
- * 1) Generación de demanda agregada d(t) = \sum_{k=1}^N d_k(t) de los N Gateways.
- * 2) Ley de control de admisión en lazo cerrado ISS (Modo Optimizado) vs Lazo Abierto (Modo No Optimizado).
- * 3) Transporte espacial por diferencias finitas Upwind en cada línea PDE k ∈ {1, ..., N}.
- * 4) Ecuación diferencial ordinaria (ODE) no lineal de balance en el Servidor Central.
+ * 1) Generación de demanda individual d_k(t) en cada uno de los N Gateways.
+ * 2) Asignación heterogénea de fracción de enrutamiento u_{ki}(t) y tasa de admisión w_k(t) ponderada por
+ *    demanda local d_k, retardo del enlace \tau_k = 1/\lambda_k y estado de llenado del búfer z(t).
+ * 3) Transporte espacial por diferencias finitas Upwind en cada línea PDE k con su propia velocidad \lambda_k
+ *    y su propio número de Courant CFL_k = (\lambda_k * dt) / dx.
+ * 4) Ecuación diferencial ordinaria (ODE) no lineal en el Servidor Central con retardos múltiples \tau_k
+ *    y cálculo de equilibrio por suma ponderada r(z*) = (\sum w_k d_k) / (1 - \sum w_k u_{ki}).
  */
 export function stepSimulation(currentState: SimulationState, dt: number): SimulationState {
   // Clonación profunda del estado para mantener inmutabilidad en el ciclo de React
@@ -364,13 +448,10 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
 
   const mode = state.mode;
   const epsilonServ = state.serverEpsilon;
-  const lambda = state.lambda;
   const numLines = state.gateways.length;
 
-  // Paso espacial \Delta x en la línea normalizada x ∈ [0, 1] y número de Courant-Friedrichs-Lewy (CFL)
+  // Paso espacial \Delta x en la línea normalizada x ∈ [0, 1]
   const dx = 1.0 / (SPATIAL_POINTS - 1);
-  // Se acota el número CFL <= 0.95 para garantizar estabilidad numérica del esquema Upwind
-  const cfl = Math.min(0.95, (lambda * dt) / dx);
 
   // ==========================================================================
   // PASO 1: Actualizar la telemetría de sensores y demanda externa d_k(t)
@@ -378,6 +459,10 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
   let totalRawDemand = 0; // Demanda externa agregada d(t) = \sum_{k=1}^N d_k(t)
 
   state.gateways.forEach((gw) => {
+    // Asegurar consistencia entre velocidad \lambda_k y retardo \tau_k = 1 / \lambda_k
+    gw.lambda = Math.max(0.3, gw.lambda || DEFAULT_LAMBDA);
+    gw.tau = Number((1 / gw.lambda).toFixed(3));
+
     const telemetry = computeSensorTelemetry(gw.environment);
     gw.sensors = {
       rainSensor: telemetry.rainSensor,
@@ -405,56 +490,84 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
   });
 
   // ==========================================================================
-  // PASO 2: Leyes de Control de Admisión w(t) y Enrutamiento u(t)
+  // PASO 2: Leyes Heterogéneas de Control de Admisión w_k(t) y Enrutamiento u_{ki}(t) (Nivel 1)
   // ==========================================================================
-  // Fracción agregada de enrutamiento/recirculación u = \sum_{k=1}^N u_{ki} = 0.20
+  // 2.1 Fracción de enrutamiento individual u_{ki}(t):
+  // Se pondera según la demanda d_k(t) y la capacidad de transporte \sqrt{\lambda_k} de cada línea,
+  // manteniendo la suma total \sum_{k=1}^N u_{ki} = u = 0.20:
   const totalU = DEFAULT_ROUTING_U;
-  const perLineU = Number((totalU / numLines).toFixed(3));
+  const routingWeights = state.gateways.map((gw) => Math.max(0.1, gw.demand * Math.sqrt(gw.lambda)));
+  const sumRoutingWeights = routingWeights.reduce((a, b) => a + b, 0);
 
-  let effectiveW = 1.0;
+  state.gateways.forEach((gw, idx) => {
+    gw.u = Number(((totalU * routingWeights[idx]) / sumRoutingWeights).toFixed(3));
+  });
 
+  // 2.2 Tasa de admisión individual w_k(t) por cada línea k:
   if (mode === 'optimized') {
-    // LEY DE CONTROL DE ADMISIÓN DINÁMICO ISS (Sección 3.1 "Otros Cálculos" y Sección 6 del informe):
-    // Definimos el factor de espacio libre relativo del búfer: [1 - z(t) / Z_max].
-    // Para garantizar wd < (1 - wu)\varepsilon y mantener el equilibrio z* dentro de la Zona Segura
-    // con margen de estabilidad positivo M_s > 0, acotamos el factor de utilización segura \eta(t):
+    // LEY DE CONTROL DE ADMISIÓN HETEROGÉNEA ISS (Nivel 1):
+    // 1) El Servidor Central mide su margen de espacio libre relativo: \eta(t) = min(0.90, max(0.10, 1 - z(t)/Z_max)).
     const freeSpaceFactor = Math.max(0.10, 1.0 - state.server.buffer / SERVER_MAX_BUFFER);
     const safeUtilizationEta = Math.min(0.90, freeSpaceFactor);
 
-    // Despejando w(t) de la desigualdad de estabilidad: w(t)*d(t) <= \eta(t) * [1 - w(t)*u] * \varepsilon
-    // ==> w(t) * [d(t) + \eta(t)*u*\varepsilon] <= \eta(t)*\varepsilon
-    const denominatorControl = Math.max(0.1, totalRawDemand + safeUtilizationEta * totalU * epsilonServ);
-    const optimalW = Math.min(1.0, Math.max(0.05, (safeUtilizationEta * epsilonServ) / denominatorControl));
+    // 2) Cada Gateway k calcula una pre-ponderación local \tilde{w}_k ∈ (0, 1] determinada por:
+    //    - Su carga de demanda local d_k(t) respecto a la cuota nominal por línea (\varepsilon / N)
+    //    - Su retardo de propagación individual \tau_k = 1/\lambda_k (canales más lentos se regulan con mayor prudencia
+    //      para prevenir oscilaciones de fase multirretardo en el búfer central).
+    const nominalPerLineCap = epsilonServ / Math.max(1, numLines);
+    const rawW = state.gateways.map((gw) => {
+      const loadRatio = gw.demand / nominalPerLineCap;
+      const delayPenalty = 1 + 0.12 * Math.max(0, gw.tau - 0.5);
+      // Si el canal está en estiaje seco (loadRatio <= 0.75), \tilde{w}_k permanece en 1.0;
+      // si sufre crecida o tormenta, reduce preventivamente su apertura en función de su sobrecarga y retardo:
+      if (loadRatio * delayPenalty <= 0.75) return 1.0;
+      return Math.min(1.0, Math.max(0.10, 0.85 / (loadRatio * delayPenalty)));
+    });
 
-    effectiveW = Number(optimalW.toFixed(3));
+    // 3) Escalamiento global exacto para garantizar la condición de estabilidad por Suma Ponderada:
+    //    \sum_{k=1}^N w_k d_k <= \eta(t) * (1 - \sum_{k=1}^N w_k u_{ki}) * \varepsilon
+    //    Sea w_k = \gamma * \tilde{w}_k. Entonces:
+    //    \gamma * [\sum \tilde{w}_k d_k + \eta(t) * \varepsilon * \sum \tilde{w}_k u_{ki}] <= \eta(t) * \varepsilon
+    const tildeD = state.gateways.reduce((acc, gw, idx) => acc + rawW[idx] * gw.demand, 0);
+    const tildeU = state.gateways.reduce((acc, gw, idx) => acc + rawW[idx] * gw.u, 0);
+    const maxAllowedScale = (safeUtilizationEta * epsilonServ) / Math.max(0.1, tildeD + safeUtilizationEta * epsilonServ * tildeU);
+    const gamma = Math.min(1.0, maxAllowedScale);
 
-    state.gateways.forEach((gw) => {
-      gw.w = effectiveW;
-      gw.u = perLineU; // Cada línea k porta una fracción u_{ki} = u / N tal que \sum_{k=1}^N u_{ki} = u
+    state.gateways.forEach((gw, idx) => {
+      gw.w = Number(Math.min(1.0, Math.max(0.05, gamma * rawW[idx])).toFixed(3));
     });
   } else {
     // MODO NO OPTIMIZADO (FIFO convencional en lazo abierto):
-    // No existe regulación preventiva (w = 1.0), admitiendo a ciegas el 100% de la avalancha de datos.
-    effectiveW = 1.0;
+    // No existe control de admisión (w_k = 1.0 para todas las líneas), ingresando toda la tormenta sin filtro.
     state.gateways.forEach((gw) => {
       gw.w = 1.0;
-      gw.u = perLineU;
     });
   }
 
-  state.server.w = effectiveW;
+  // Cálculo de las sumas ponderadas y del factor medio efectivo para visualización en el Servidor
+  const weightedDemandSum = state.gateways.reduce((acc, gw) => acc + gw.w * gw.demand, 0);
+  const weightedRoutingSum = state.gateways.reduce((acc, gw) => acc + gw.w * gw.u, 0);
+  const avgEffectiveW = totalRawDemand > 0 ? weightedDemandSum / totalRawDemand : 1.0;
+
+  state.server.w = Number(avgEffectiveW.toFixed(3));
   state.server.u = totalU;
+  state.server.weightedDemand = Number(weightedDemandSum.toFixed(2));
+  state.server.weightedRouting = Number(weightedRoutingSum.toFixed(3));
+
+  // Actualizar promedios de velocidad \lambda y retardo \tau del estado global
+  state.lambda = Number((state.gateways.reduce((s, g) => s + g.lambda, 0) / numLines).toFixed(2));
+  state.tau = Number((state.gateways.reduce((s, g) => s + g.tau, 0) / numLines).toFixed(3));
 
   // Tasa instantánea de procesamiento actual del Servidor Central r(z(t)) = \varepsilon * z(t) / (1 + z(t))
   const currentServerR = nonlinearProcessingRate(state.server.buffer, epsilonServ);
 
   // ==========================================================================
-  // PASO 3: Dinámica de cada Gateway y Solución Numérica de las N Líneas PDE
+  // PASO 3: Dinámica de cada Gateway y Solución Numérica de las N Líneas PDE Heterogéneas
   // ==========================================================================
   let totalArrivalAtServer = 0; // Suma de flujos que arriban en x = 1: \sum_{k=1}^N q_{ki}(t, 1)
 
   state.gateways.forEach((gw, gIdx) => {
-    // Flujo externo admitido por el Gateway k: w_k(t) * d_k(t)
+    // Flujo externo admitido individualmente por el Gateway k: w_k(t) * d_k(t)
     const admittedDemand = gw.w * gw.demand;
     const rejectedAtGateway = gw.demand - admittedDemand;
 
@@ -478,26 +591,28 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
 
     gw.outflow = admittedDemand;
 
-    // CONDICIÓN DE FRONTERA DINÁMICA EN EL ORIGEN DE LA LÍNEA k (x = 0):
-    // Bajo la reducción escalar acoplada (Pasos 6 a 9 del informe), por cada línea k ∈ U_i
-    // viaja la demanda admitida w_k * d_k más la fracción enrutada/recirculada w_k * u_{ki} * r(z):
+    // CONDICIÓN DE FRONTERA DINÁMICA EN EL ORIGEN DE LA LÍNEA HETEROGÉNEA k (x = 0):
+    // q_{ki}(t, 0) = w_k(t) * d_k(t) + w_k(t) * u_{ki}(t) * r(z(t))
     const q_boundary = admittedDemand + gw.w * gw.u * currentServerR;
 
-    // ESQUEMA NUMÉRICO UPWIND DE PRIMER ORDEN PARA LA PDE HIPERBÓLICA:
-    // \partial q_{ki}/\partial t + \lambda \partial q_{ki}/\partial x = 0,  x ∈ [0, 1]
+    // ESQUEMA NUMÉRICO UPWIND DE PRIMER ORDEN CON VELOCIDAD INDIVIDUAL \lambda_k:
+    // \partial q_{ki}/\partial t + \lambda_k \partial q_{ki}/\partial x = 0,  x ∈ [0, 1]
+    // Cada línea posee su propio número de Courant-Friedrichs-Lewy CFL_k = (\lambda_k * dt) / dx
+    // y su propio retardo de tránsito \tau_k = 1 / \lambda_k:
+    const cfl_k = Math.min(0.95, (gw.lambda * dt) / dx);
     const oldQ = [...gw.spatialQ];
     const newQ = new Array(SPATIAL_POINTS).fill(0);
     newQ[0] = q_boundary;
 
     for (let m = 1; m < SPATIAL_POINTS; m++) {
-      const advectionFlux = cfl * (oldQ[m] - oldQ[m - 1]);
+      const advectionFlux = cfl_k * (oldQ[m] - oldQ[m - 1]);
       newQ[m] = Math.max(0, oldQ[m] - advectionFlux);
     }
 
     gw.spatialQ = newQ;
 
     // EVALUACIÓN EN LA FRONTERA RECEPTORA (x = 1, entrada al Servidor Central):
-    // q_{ki}(t, 1) representa el flujo que arriba al servidor tras el retardo físico \tau = 1/\lambda
+    // q_{ki}(t, 1) = q_{ki}(t - \tau_k, 0) arriba tras el retardo individual \tau_k = 1/\lambda_k
     const arrivalFromThisLine = newQ[SPATIAL_POINTS - 1];
     totalArrivalAtServer += arrivalFromThisLine;
 
@@ -514,13 +629,12 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
   });
 
   // ==========================================================================
-  // PASO 4: Integración de la ODE No Lineal de Balance en el Servidor Central
+  // PASO 4: Integración de la ODE No Lineal Multirretardo en el Servidor Central
   // ==========================================================================
-  // En la entrada del servidor (x = 1), la suma de las N líneas PDE entrega:
-  //   \sum_{k=1}^N q_{ki}(t, 1) = w * d(t - \tau) + w * u * r(z(t - \tau))
-  // Por tanto, la ODE de balance (Ecuación 9 del informe):
-  //   dz/dt = w*d + w*u * [\varepsilon * z(t - \tau) / (1 + z(t - \tau))] - [\varepsilon * z(t) / (1 + z(t))]
-  // se integra directamente restando la tasa de procesamiento instantánea r(z(t)):
+  // En la entrada del servidor (x = 1), confluyen las N líneas con sus respectivos retardos \tau_k:
+  //   \sum_{k=1}^N q_{ki}(t, 1) = \sum_{k=1}^N [ w_k d_k(t - \tau_k) + w_k u_{ki} r(z(t - \tau_k)) ]
+  // Por tanto, la ODE de balance en el Servidor Central es:
+  //   dz/dt = \sum_{k=1}^N q_{ki}(t, 1) - r(z(t))
   state.server.inflow = Number(totalArrivalAtServer.toFixed(1));
   state.server.inflowKBS = Number(((totalArrivalAtServer * UNIFIED_PACKET_BYTES) / 1000).toFixed(2));
 
@@ -537,7 +651,7 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
   state.server.bufferKB = Number(((state.server.buffer * UNIFIED_PACKET_BYTES) / 1000).toFixed(2));
 
   // ==========================================================================
-  // PASO 5: Verificación de Desborde Físico (Buffer Overflow) y Equilibrio z*
+  // PASO 5: Verificación de Desborde Físico y Equilibrio por Suma Ponderada z*
   // ==========================================================================
   const isOverflow = state.server.buffer >= state.server.bufferCapacity;
   let droppedThisStep = 0;
@@ -559,9 +673,10 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
   state.server.totalAdmitted += totalArrivalAtServer * dt;
   state.server.totalProcessed += rServer * dt;
 
-  // Cálculo del Punto de Equilibrio Analítico Exacto z* = wd / [(1 - wu)\varepsilon - wd]
-  // usando las variables escalares agregadas: w = effectiveW, u = \sum u_{ki} = totalU, d = \sum d_k = totalRawDemand
-  const eq = calculateEquilibrium(effectiveW, totalU, totalRawDemand, epsilonServ);
+  // Cálculo del Punto de Equilibrio Analítico por Suma Ponderada (Nivel 1):
+  //   r(z*) = (\sum w_k d_k) / (1 - \sum w_k u_{ki})
+  //   z* = (\sum w_k d_k) / [(1 - \sum w_k u_{ki})\varepsilon - \sum w_k d_k]
+  const eq = calculateHeterogeneousEquilibrium(state.gateways, epsilonServ);
   state.server.zEquilibrium = eq.zStar;
   state.server.isEquilibriumFinite = eq.isStable === 1;
 
@@ -569,13 +684,16 @@ export function stepSimulation(currentState: SimulationState, dt: number): Simul
   state.server.queueDelay = Number(((state.server.buffer / Math.max(0.5, rServer)) * 100).toFixed(0));
 
   // ==========================================================================
-  // PASO 6: Actualizar posición de partículas en las líneas PDE y guardar historial
+  // PASO 6: Actualizar posición de partículas con velocidad individual \lambda_k
   // ==========================================================================
   state.particles = state.particles
-    .map((p) => ({
-      ...p,
-      x: p.x + lambda * dt * 0.45,
-    }))
+    .map((p) => {
+      const lineLambda = state.gateways[p.gatewayIndex]?.lambda || state.lambda;
+      return {
+        ...p,
+        x: p.x + lineLambda * dt * 0.45,
+      };
+    })
     .filter((p) => p.x <= 1.0);
 
   // Registro periódico de muestras (cada 0.25 s) para las gráficas analíticas en tiempo real

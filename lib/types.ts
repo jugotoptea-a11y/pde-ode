@@ -1,7 +1,8 @@
 // ============================================================================
 // DEFINICIÓN DE TIPOS E INTERFACES DEL MODELO HÍBRIDO PDE-ODE (CERO DESBORDE)
 // Basado en la formulación de Espitia, Girard, Marchand y Prieur (2017)
-// bajo reducción escalar acoplada para múltiples líneas de transmisión.
+// bajo configuración Multilínea Heterogénea (Nivel 1: Retardos τ_k distintos
+// y equilibrio por suma ponderada hacia el Servidor Central).
 // ============================================================================
 
 /**
@@ -50,25 +51,29 @@ export interface PacketParticle {
 }
 
 /**
- * Estado dinámico de cada pasarela concentradora (Gateway IoT k) y su línea de transmisión PDE.
+ * Estado dinámico de cada pasarela concentradora (Gateway IoT k) y su línea de transmisión PDE heterogénea.
  */
 export interface GatewayNodeState {
   id: string;              // Identificador del nodo (ej. 'gw-1')
   name: string;            // Nombre visible del Gateway
   location: string;        // Ubicación hidráulica de la estación de telemetría
+  distanceKm: number;      // Distancia física del enlace LoRa al Servidor Central L_k [km]
+  loraSF: string;          // Factor de Dispersión LoRa asignado (Spreading Factor: SF7 a SF10)
   environment: EnvironmentalState; // Condiciones hidrometeorológicas locales del canal
   sensors: {
     rainSensor: SensorTelemetry;   // Telemetría del Pluviómetro (lluvia P)
     waterSensor: SensorTelemetry;  // Telemetría del Sensor de Agua (par acoplado Q y v)
   };
+  lambda: number;          // Velocidad de propagación individual de la línea k: \lambda_k [s⁻¹]
+  tau: number;             // Retardo físico individual de la línea k: \tau_k = 1 / \lambda_k [s]
   buffer: number;          // Variable de estado local z_k(t) en paquetes (~119 B c/u)
   bufferCapacity: number;  // Capacidad física máxima del búfer del Gateway [paq]
   epsilon: number;         // Capacidad asintótica de procesamiento del Gateway \varepsilon_k [paq/s]
-  w: number;               // Factor de control de admisión w_k(t) ∈ [0, 1]
-  u: number;               // Fracción de enrutamiento de la línea u_{ki}(t) ∈ [0, 1), donde \sum u_{ki} = u
+  w: number;               // Factor individual de control de admisión w_k(t) ∈ [0, 1]
+  u: number;               // Fracción individual de enrutamiento de la línea u_{ki}(t) ∈ [0, 1), donde \sum u_{ki} = u
   demand: number;          // Demanda externa del canal d_k(t) [paq/s]
   demandKBS: number;       // Demanda externa del canal d_k(t) [kB/s]
-  outflow: number;         // Tasa de salida procesada por el Gateway r_k(z_k) [paq/s]
+  outflow: number;         // Tasa de salida admitida por el Gateway w_k * d_k [paq/s]
   spatialQ: number[];      // Perfil espacial discretizado q_{ki}(t, x) en la línea PDE (M nodos en x ∈ [0, 1])
   droppedPackets: number;  // Total acumulado de paquetes descartados en este nodo
   admittedPackets: number; // Total acumulado de paquetes admitidos en este nodo
@@ -76,7 +81,7 @@ export interface GatewayNodeState {
 }
 
 /**
- * Estado dinámico del Servidor Central receptor (ecuación de balance ODE y métricas de cola).
+ * Estado dinámico del Servidor Central receptor (ecuación de balance ODE multirretardo y métricas de cola).
  */
 export interface CentralServerState {
   buffer: number;          // Estado actual del búfer central z(t) [paquetes]
@@ -84,14 +89,16 @@ export interface CentralServerState {
   bufferCapacity: number;  // Capacidad física límite del servidor Z_max [paquetes] (120 paq = ~14.28 kB)
   epsilon: number;         // Capacidad máxima asintótica de procesamiento \varepsilon [paq/s]
   epsilonKBS: number;      // Capacidad máxima asintótica \varepsilon [kB/s]
-  w: number;               // Factor efectivo de admisión aplicado w(t) ∈ [0, 1]
+  w: number;               // Promedio ponderado del factor de admisión efectivo \bar{w}(t) ∈ [0, 1]
   u: number;               // Fracción agregada de enrutamiento/recirculación u = \sum_{k=1}^N u_{ki} ∈ [0, 1)
+  weightedDemand: number;  // Suma ponderada de demanda admitida: \sum_{k=1}^N w_k d_k [paq/s]
+  weightedRouting: number; // Suma ponderada de enrutamiento efectivo: \sum_{k=1}^N w_k u_{ki} (adimensional)
   inflow: number;          // Flujo total que arriba desde las líneas PDE \sum q_{ki}(t, 1) [paq/s]
   inflowKBS: number;       // Flujo total entrante al servidor [kB/s]
   processingRate: number;  // Tasa instantánea no lineal de procesamiento r(z) = \varepsilon z / (1 + z) [paq/s]
   processingRateKBS: number; // Tasa instantánea de procesamiento r(z) [kB/s]
-  zEquilibrium: number;    // Punto de equilibrio analítico z* = wd / [(1 - wu)\varepsilon - wd] [paq]
-  isEquilibriumFinite: boolean; // Indica si se cumple la condición de estabilidad wd < (1 - wu)\varepsilon
+  zEquilibrium: number;    // Equilibrio analítico por suma ponderada: z* = (\sum w_k d_k) / [(1 - \sum w_k u_{ki})\varepsilon - \sum w_k d_k]
+  isEquilibriumFinite: boolean; // Indica si se cumple \sum w_k d_k < (1 - \sum w_k u_{ki})\varepsilon
   totalAdmitted: number;   // Total histórico de paquetes admitidos por el servidor
   totalProcessed: number;  // Total histórico de paquetes procesados y evacuados
   totalDropped: number;    // Total histórico de paquetes perdidos por desborde (buffer overflow)

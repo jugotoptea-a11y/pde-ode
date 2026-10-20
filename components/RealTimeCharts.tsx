@@ -521,13 +521,14 @@ export function RealTimeCharts({ state }: RealTimeChartsProps) {
           {activeTab === 'spatial' && (
             <>
               <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-900 border border-slate-700 text-slate-200">
-                <MathBlock math="\frac{\partial q}{\partial t} + \lambda \frac{\partial q}{\partial x} = 0" />
+                <MathBlock math="\frac{\partial q_{ki}}{\partial t} + \lambda_k \frac{\partial q_{ki}}{\partial x} = 0" />
               </div>
 
               {state.gateways.map((g, i) => (
                 <div key={g.id} className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-slate-300">
                   <MathBlock math={`q_{${i + 1}}(0):`} />
-                  <span className="font-bold">{(g.spatialQ[0] || g.demand).toFixed(1)} paq/s</span>
+                  <span className="font-bold">{(g.spatialQ[0] || g.demand).toFixed(1)}</span>
+                  <span className="text-[10px] text-indigo-400">({g.distanceKm}km, τ={g.tau.toFixed(2)}s)</span>
                 </div>
               ))}
             </>

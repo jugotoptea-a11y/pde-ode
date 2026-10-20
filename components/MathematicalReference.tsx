@@ -97,13 +97,13 @@ export function MathematicalReference() {
               {/* 4. \lambda_ij */}
               <tr className="hover:bg-slate-900/60 transition-colors">
                 <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
-                  <MathBlock math="\lambda_{ij} > 0" />
+                  <MathBlock math="\lambda_{k} > 0" />
                 </td>
                 <td className="py-2.5 px-3 font-sans text-slate-300">
-                  Velocidad efectiva de propagación del tráfico de datos en la coordenada espacial normalizada.
+                  Velocidad efectiva de propagación LoRa en coordenada normalizada (<MathBlock math="\lambda_k = v_{\text{LoRa},k}/L_k" />, según Factor de Dispersión SF7–SF10 y distancia).
                 </td>
                 <td className="py-2.5 px-3 font-mono text-slate-300">s⁻¹</td>
-                <td className="py-2.5 px-3 font-mono text-slate-400">1 / s (λ = 1.8)</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">λₖ ∈ [0.90, 2.40] s⁻¹</td>
               </tr>
 
               {/* 5. z_i(t) */}
@@ -181,13 +181,13 @@ export function MathematicalReference() {
               {/* 11. \tau_ij */}
               <tr className="hover:bg-slate-900/60 transition-colors">
                 <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
-                  <MathBlock math="\tau_{ij} = \frac{1}{\lambda_{ij}}" />
+                  <MathBlock math="\tau_{k} = \frac{1}{\lambda_{k}}" />
                 </td>
                 <td className="py-2.5 px-3 font-sans text-slate-300">
-                  Tiempo de retardo físico de transporte por la línea cuando <MathBlock math="x" /> está normalizada entre 0 y 1.
+                  Tiempo de retardo físico de tránsito LoRa (Time-on-Air + propagación) por cada línea <MathBlock math="k" /> (<MathBlock math="x \in [0, 1]" />).
                 </td>
                 <td className="py-2.5 px-3 font-mono text-slate-300">Segundos [s]</td>
-                <td className="py-2.5 px-3 font-mono text-slate-400">τ = 0.556 s</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">τₖ ∈ [0.42, 1.11] s</td>
               </tr>
 
               {/* 12. \theta_i(z_i) */}
@@ -265,13 +265,13 @@ export function MathematicalReference() {
               {/* 18. L y v */}
               <tr className="hover:bg-slate-900/60 transition-colors">
                 <td className="py-2.5 px-3 text-indigo-300 font-semibold text-sm">
-                  <MathBlock math="L, \ v" />
+                  <MathBlock math="L_k, \ v_{\text{LoRa}, k}" />
                 </td>
                 <td className="py-2.5 px-3 font-sans text-slate-300">
-                  Longitud física del canal y velocidad física real de transmisión de datos en el enlace (<MathBlock math="\tau = L/v" />).
+                  Distancia del enlace LoRa y velocidad efectiva de modulación Chirp Spread Spectrum (<MathBlock math="\tau_k = L_k / v_{\text{LoRa},k}" />).
                 </td>
                 <td className="py-2.5 px-3 font-mono text-slate-300">Metros [m] y [m/s]</td>
-                <td className="py-2.5 px-3 font-mono text-slate-400">Fibra / enlace IP</td>
+                <td className="py-2.5 px-3 font-mono text-slate-400">Enlace LoRa (SF7–SF10)</td>
               </tr>
 
               {/* 19. r'_i(z_i) */}
@@ -290,79 +290,79 @@ export function MathematicalReference() {
         </div>
       </div>
 
-      {/* Sección 2: Derivación Matemática de las Ecuaciones Diferenciales */}
+      {/* Sección 2: Derivación Matemática de las Ecuaciones Diferenciales (Nivel 1 Heterogéneo) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Caja 1: Transporte PDE por Características */}
+        {/* Caja 1: Transporte PDE por Características con Retardos Distintos \tau_k */}
         <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-2">
           <div className="flex items-center gap-2 text-sky-400 font-semibold text-xs">
             <Waves className="w-4 h-4" />
-            <span>2. PDE: Dinámica del Tránsito en las N Líneas (Método de Características)</span>
+            <span>2. PDE: Tránsito Multilínea con Retardos Distintos τₖ (Fase I, Pasos 1–8)</span>
           </div>
           <p className="text-xs text-slate-400">
-            Transporte continuo a lo largo de cada línea <MathBlock math="k \in \mathcal{U}_i" /> en <MathBlock math="x \in [0, 1]" /> (Fase I, Pasos 1–8):
+            Cada línea <MathBlock math="k \in \{1, \dots, N\}" /> tiene su propia velocidad <MathBlock math="\lambda_k > 0" /> y retardo <MathBlock math="\tau_k = 1/\lambda_k" />:
           </p>
           <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
-            <MathBlock math="\frac{\partial q_{ki}(t, x)}{\partial t} + \lambda_{ki} \frac{\partial q_{ki}(t, x)}{\partial x} = 0" block />
+            <MathBlock math="\frac{\partial q_{ki}(t, x)}{\partial t} + \lambda_k \frac{\partial q_{ki}(t, x)}{\partial x} = 0" block />
           </div>
           <p className="text-xs text-slate-400">
-            Sobre las rectas características <MathBlock math="x(t) - \lambda t = C" />, evaluando en la llegada al servidor (<MathBlock math="x = 1" />):
+            Sobre las rectas características <MathBlock math="t_0 = t - x/\lambda_k" />, el flujo que arriba al servidor (<MathBlock math="x = 1" />) es:
           </p>
           <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 text-center font-mono text-xs text-sky-300">
-            <MathBlock math="\tau = \frac{1}{\lambda}, \quad q_{ki}(t, 1) = u_{ki}(t - \tau)\, r(z(t - \tau)), \quad t \ge \tau" />
+            <MathBlock math="\tau_k = \frac{1}{\lambda_k}, \quad q_{ki}(t, 1) = w_k d_k(t - \tau_k) + w_k u_{ki}\, r(z(t - \tau_k))" />
           </div>
         </div>
 
-        {/* Caja 2: Balance ODE y Reducción Escalar */}
+        {/* Caja 2: Balance ODE Multirretardo en el Servidor Central */}
         <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-2">
           <div className="flex items-center gap-2 text-purple-400 font-semibold text-xs">
             <Cpu className="w-4 h-4" />
-            <span>3. ODE: Balance de Masa y Reducción Escalar (Fase II, Paso 9)</span>
+            <span>3. ODE: Balance Multirretardo en el Servidor Central (Fase II, Paso 9)</span>
           </div>
           <p className="text-xs text-slate-400">
-            Acoplando la demanda agregada <MathBlock math="d = \sum d_k" /> y la suma de las <MathBlock math="N" /> líneas <MathBlock math="\sum_{k \in \mathcal{U}_i} u_{ki} = u" />:
+            En el régimen transitorio, al Servidor Central confluyen las <MathBlock math="N" /> líneas con retardos distintos <MathBlock math="\tau_k" />:
           </p>
           <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
-            <MathBlock math="\frac{dz}{dt} = w d + w u \cdot \frac{\varepsilon \cdot z(t - \tau)}{1 + z(t - \tau)} - \frac{\varepsilon \cdot z(t)}{1 + z(t)}" block />
+            <MathBlock math="\frac{dz}{dt} = \sum_{k=1}^N \left[ w_k d_k(t - \tau_k) + w_k u_{ki} \frac{\varepsilon\, z(t - \tau_k)}{1 + z(t - \tau_k)} \right] - \frac{\varepsilon\, z(t)}{1 + z(t)}" block />
           </div>
           <p className="text-xs text-slate-400">
-            Donde <MathBlock math="w \in [0, 1]" /> regula la admisión y <MathBlock math="u = \sum_{k=1}^N u_{ki} \in [0, 1)" /> representa la fracción agregada de enrutamiento.
+            Si los enlaces son homogéneos (<MathBlock math="\tau_k = \tau, \ w_k = w" />), se recupera la DDE escalar con <MathBlock math="d = \sum d_k" /> y <MathBlock math="u = \sum u_{ki}" />.
           </p>
         </div>
 
-        {/* Caja 3: Función No Lineal de Procesamiento */}
+        {/* Caja 3: Función No Lineal de Procesamiento y Suma Ponderada */}
         <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-2">
           <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs">
             <BookOpen className="w-4 h-4" />
-            <span>4. Función No Lineal de Procesamiento y Saturación</span>
+            <span>4. Tasa de Servicio en Equilibrio por Suma Ponderada (Nivel 1)</span>
           </div>
           <p className="text-xs text-slate-400">
-            Con tiempo medio de residencia <MathBlock math="\theta_i(z_i) = \frac{1 + z_i}{\varepsilon_i}" />, la tasa de servicio es <MathBlock math="r_i(z_i) = \frac{z_i}{\theta_i(z_i)}" />:
+            En estado estacionario (<MathBlock math="dz/dt = 0" />, <MathBlock math="z(t-\tau_k) = z^*" />), la tasa de servicio requerida es la suma ponderada:
           </p>
           <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
-            <MathBlock math="r_i(z_i) = \frac{\varepsilon_i z_i}{1 + z_i}" block />
+            <MathBlock math="r(z^*) = \frac{\varepsilon z^*}{1 + z^*} = \frac{\sum_{k=1}^N w_k d_k}{1 - \sum_{k=1}^N w_k u_{ki}}" block />
           </div>
           <p className="text-xs text-slate-400">
-            Cumple <MathBlock math="r_i(0) = 0" /> y asíntota límite <MathBlock math="\lim_{z_i \to \infty} r_i(z_i) = \varepsilon_i" />. En equilibrio: <MathBlock math="r(z^*) = \frac{w d}{1 - w u}" />.
+            Cumple <MathBlock math="r(0) = 0" /> y asíntota límite <MathBlock math="\lim_{z \to \infty} r(z) = \varepsilon" />. Para <MathBlock math="w_k = w" />, se reduce a <MathBlock math="r(z^*) = \frac{wd}{1-wu}" />.
           </p>
         </div>
 
-        {/* Caja 4: Equilibrio Algebraico y Condición ISS */}
+        {/* Caja 4: Equilibrio Algebraico Heterogéneo y Condición ISS */}
         <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-2">
           <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
             <GraduationCap className="w-4 h-4" />
             <span className="flex items-center gap-1">5. Punto de Equilibrio <MathBlock math="z^*" /> y Condición ISS (Pasos 10–16)</span>
           </div>
           <p className="text-xs text-slate-400">
-            En régimen permanente (<MathBlock math="dz/dt = 0" /> y <MathBlock math="z(t-\tau) = z^*" />), despejando algebraicamente:
+            Despejando <MathBlock math="z^*" /> de la suma ponderada heterogénea (y su caso homogéneo equivalente):
           </p>
           <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-center my-1 overflow-x-auto">
-            <MathBlock math="z^* = \frac{w \cdot d}{(1 - w \cdot u)\varepsilon - w \cdot d}" block />
+            <MathBlock math="z^* = \frac{\sum_{k=1}^N w_k d_k}{\left(1 - \sum_{k=1}^N w_k u_{ki}\right)\varepsilon - \sum_{k=1}^N w_k d_k} \;\;\xrightarrow{w_k = w}\;\; \frac{w d}{(1 - w u)\varepsilon - w d}" block />
           </div>
           <p className="text-xs text-slate-400">
-            <strong>Condición analítica de existencia física y no-desborde:</strong>
+            <strong>Condición analítica de existencia física y Cero Desborde:</strong>
           </p>
           <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 text-center text-xs text-emerald-400 font-mono font-bold">
-            <MathBlock math="w \cdot d < (1 - w \cdot u)\varepsilon" />
+            <MathBlock math="\sum_{k=1}^N w_k d_k < \left(1 - \sum_{k=1}^N w_k u_{ki}\right)\varepsilon" />
           </div>
         </div>
       </div>

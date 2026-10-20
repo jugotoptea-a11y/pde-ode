@@ -7,6 +7,7 @@ import {
   stepSimulation,
   createInitialEnvironmentalState,
   computeSensorTelemetry,
+  deriveLoRaParamsFromLambda,
 } from '@/lib/simulation-engine';
 import { NetworkCanvas } from '@/components/NetworkCanvas';
 import { RealTimeCharts } from '@/components/RealTimeCharts';
@@ -156,6 +157,36 @@ export default function Home() {
               waterSensor: { ...telemetry.waterSensor },
             },
             demand: telemetry.totalDemand,
+          };
+        }
+        return gw;
+      });
+      return { ...prev, gateways: updatedGws };
+    });
+  }, []);
+
+  // Manejador: Actualizar la velocidad de propagación individual \lambda_k (y retardo \tau_k = 1/\lambda_k) de un Gateway (Nivel 1)
+  const handleUpdateGatewayLambda = useCallback((gwIndex: number, newLambda: number) => {
+    const safeLambda = Math.max(0.3, Math.min(3.5, newLambda));
+    const newTau = Number((1 / safeLambda).toFixed(3));
+    const loraDerived = deriveLoRaParamsFromLambda(safeLambda);
+
+    if (stateRef.current && stateRef.current.gateways && stateRef.current.gateways[gwIndex]) {
+      stateRef.current.gateways[gwIndex].lambda = safeLambda;
+      stateRef.current.gateways[gwIndex].tau = newTau;
+      stateRef.current.gateways[gwIndex].distanceKm = loraDerived.distanceKm;
+      stateRef.current.gateways[gwIndex].loraSF = loraDerived.loraSF;
+    }
+
+    setState((prev) => {
+      const updatedGws = prev.gateways.map((gw, idx) => {
+        if (idx === gwIndex) {
+          return {
+            ...gw,
+            lambda: safeLambda,
+            tau: newTau,
+            distanceKm: loraDerived.distanceKm,
+            loraSF: loraDerived.loraSF,
           };
         }
         return gw;
@@ -402,10 +433,10 @@ export default function Home() {
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
               <h2 className="text-sm font-bold text-slate-200 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-sky-400" />
-                <span>Sección 1: Simulación de Tráfico de Red y Topología IoT</span>
+                <span>Sección 1: Simulación de Tráfico de Red y Topología IoT (Nivel 1 Heterogéneo)</span>
               </h2>
               <span className="text-xs text-slate-400 font-mono">
-                Líneas PDE: {state.gateways.length} | Retardo τ = {state.tau}s
+                Enlaces LoRa ({state.gateways.length}): {state.gateways.map((g, i) => `L_${i + 1}=${g.distanceKm}km (${g.loraSF}, τ_${i + 1}=${g.tau.toFixed(2)}s)`).join(' · ')}
               </span>
             </div>
 
@@ -424,6 +455,7 @@ export default function Home() {
               selectedGatewayIndex={selectedGatewayIndex}
               onSelectGateway={setSelectedGatewayIndex}
               onUpdateGatewayEnvironment={handleUpdateGatewayEnvironment}
+              onUpdateGatewayLambda={handleUpdateGatewayLambda}
               onApplyPresetToSelected={handleApplyPresetToSelected}
               onApplyPresetToAll={handleApplyPresetToAll}
               onTriggerSpike={handleTriggerSpike}

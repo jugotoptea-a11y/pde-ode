@@ -138,22 +138,22 @@ export function NetworkCanvas({
         ctx.lineWidth = isSelected ? 3.5 : 2;
         ctx.stroke();
 
-        // Etiqueta informativa sobre cada línea de transmisión PDE
+        // Etiqueta informativa sobre cada línea de transmisión PDE heterogénea (Distancia L_k, LoRa SF y retardo \tau_k)
         const midX = (startX + endX) / 2;
         const midY = (startY + endY) / 2 + (idx - (numGateways - 1) / 2) * 14;
 
         ctx.beginPath();
-        ctx.roundRect(midX - 58, midY - 14, 116, 18, 5);
-        ctx.fillStyle = 'rgba(9, 14, 26, 0.85)';
+        ctx.roundRect(midX - 82, midY - 14, 164, 18, 5);
+        ctx.fillStyle = 'rgba(9, 14, 26, 0.88)';
         ctx.fill();
-        ctx.strokeStyle = isSelected ? 'rgba(56, 189, 248, 0.6)' : 'rgba(148, 163, 184, 0.2)';
+        ctx.strokeStyle = isSelected ? 'rgba(56, 189, 248, 0.6)' : 'rgba(148, 163, 184, 0.25)';
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        ctx.fillStyle = isSelected ? '#38bdf8' : '#94a3b8';
+        ctx.fillStyle = isSelected ? '#38bdf8' : '#cbd5e1';
         ctx.font = '9px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(`Línea ${idx + 1}: τ=${state.tau}s | 119B`, midX, midY - 2);
+        ctx.fillText(`L_${idx + 1}=${gw.distanceKm}km (${gw.loraSF}) | τ_${idx + 1}=${gw.tau.toFixed(2)}s`, midX, midY - 2);
       });
 
       // 2. DIBUJAR PARTÍCULAS EN MOVIMIENTO SOBRE LAS CURVAS CARACTERÍSTICAS PDE
@@ -301,9 +301,9 @@ export function NetworkCanvas({
         }
 
         ctx.fillStyle = isSelected ? '#38bdf8' : '#f8fafc';
-        ctx.font = 'bold 11px sans-serif';
+        ctx.font = 'bold 10.5px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`Gateway ${idx + 1}`, gLeft + gwW / 2, gTop + 17);
+        ctx.fillText(`GW ${idx + 1} (${gw.distanceKm}km · ${gw.loraSF})`, gLeft + gwW / 2, gTop + 17);
 
         // Barra de progreso del búfer local del Gateway
         const bufRatio = Math.min(1, gw.buffer / GATEWAY_MAX_BUFFER);
@@ -322,11 +322,11 @@ export function NetworkCanvas({
         ctx.fillStyle = bufColor;
         ctx.fillRect(barX, barY, barW * bufRatio, barH);
 
-        // Parámetros de demanda d_k, admisión w_k y fracción de enrutamiento u_{ki}
+        // Parámetros heterogéneos de demanda d_k, admisión individual w_k y fracción de enrutamiento u_{ki}
         ctx.fillStyle = '#94a3b8';
         ctx.font = '9px monospace';
-        ctx.fillText(`d=${gw.demand.toFixed(1)} paq/s`, gLeft + gwW / 2, gTop + 43);
-        ctx.fillText(`w=${gw.w.toFixed(2)} | u=${gw.u.toFixed(2)}`, gLeft + gwW / 2, gTop + 57);
+        ctx.fillText(`d_${idx + 1}=${gw.demand.toFixed(1)} paq/s`, gLeft + gwW / 2, gTop + 43);
+        ctx.fillText(`w_${idx + 1}=${gw.w.toFixed(2)} | u_${idx + 1}=${gw.u.toFixed(2)}`, gLeft + gwW / 2, gTop + 57);
       });
 
       // 4. DIBUJAR EL SERVIDOR CENTRAL RECEPTOR (ODE DE BALANCE Y COLA z(t))
@@ -495,10 +495,10 @@ export function NetworkCanvas({
       {/* Barra Inferior de Resumen Técnico */}
       <div className="bg-slate-900/90 border-t border-slate-800 px-4 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 text-xs text-slate-400">
         <div className="flex items-center gap-3">
-          <span>Consolidación Gateway: <strong>20B (Pluv) + 20B (Agua) → 119B JSON</strong> (-24.7% peaje) | Escala Bytes / kB (<strong>jamás 1 MB</strong>)</span>
+          <span>Red LoRa Consolidada: <strong>20B + 20B → 119B JSON</strong> (-24.7% peaje) | Suma ponderada: <strong>∑wₖdₖ = {state.server.weightedDemand.toFixed(1)} paq/s</strong></span>
         </div>
         <div className="font-mono text-slate-300">
-          Retardo PDE: τ = 1/λ = <strong>{state.tau}s</strong> | Capacidad Servidor ε = <strong>{state.server.epsilon} paq/s ({state.server.epsilonKBS} kB/s)</strong>
+          Distancias y Retardos LoRa: <strong>{state.gateways.map((g, i) => `L_${i + 1}=${g.distanceKm}km (${g.loraSF}, τ_${i + 1}=${g.tau.toFixed(2)}s)`).join(' · ')}</strong>
         </div>
       </div>
     </div>

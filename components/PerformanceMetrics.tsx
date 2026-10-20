@@ -24,15 +24,14 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
   const totalFlow = state.server.totalProcessed + state.server.totalDropped;
   const lossPercentage = totalFlow > 0 ? (state.server.totalDropped / totalFlow) * 100 : 0;
 
-  // Verificación exacta de la condición analítica de estabilidad bajo reducción escalar:
-  //   w * d < (1 - w * u) * \varepsilon
-  // donde d = \sum_{k=1}^N d_k es la demanda externa agregada y u = \sum_{k=1}^N u_{ki} es la fracción de enrutamiento
-  const w = state.server.w;
-  const u = state.server.u;
-  const totalDemandD = state.gateways.reduce((acc, g) => acc + g.demand, 0);
+  // Verificación exacta de la condición analítica de estabilidad en configuración Heterogénea (Nivel 1):
+  //   \sum_{k=1}^N w_k d_k < (1 - \sum_{k=1}^N w_k u_{ki}) * \varepsilon
+  // donde D_w = \sum w_k d_k es la demanda efectiva ponderada y U_w = \sum w_k u_{ki} es el enrutamiento ponderado
+  const weightedDemandD = state.gateways.reduce((acc, g) => acc + g.w * g.demand, 0);
+  const weightedRoutingU = state.gateways.reduce((acc, g) => acc + g.w * g.u, 0);
   const eps = state.server.epsilon;
-  const lhs = w * totalDemandD;
-  const rhs = (1 - w * u) * eps;
+  const lhs = weightedDemandD;
+  const rhs = (1 - weightedRoutingU) * eps;
   const isConditionMet = lhs < rhs;
 
   return (
@@ -146,10 +145,10 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
         </div>
       </div>
 
-      {/* 6. Latencia de Cola y Condición Analítica de Estabilidad wd < (1 - wu)\varepsilon */}
+      {/* 6. Latencia de Cola y Condición Analítica de Estabilidad por Suma Ponderada (Nivel 1) */}
       <div className="p-3 rounded-xl border bg-slate-900/80 border-slate-800 flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <span>Latencia de Cola</span>
+          <span>Latencia / Condición</span>
           <Clock className="w-4 h-4 text-slate-400" />
         </div>
         <div className="mt-2 font-mono font-bold text-lg text-slate-100 tabular-nums">
@@ -157,12 +156,12 @@ export function PerformanceMetrics({ state }: PerformanceMetricsProps) {
         </div>
         <div className="text-[10px] font-mono tabular-nums">
           {isConditionMet ? (
-            <span className="text-emerald-400 font-semibold flex items-center gap-1">
-              <MathBlock math="wd < (1-wu)\varepsilon" /> ✓
+            <span className="text-emerald-400 font-semibold flex items-center gap-1" title={`${lhs.toFixed(1)} < ${rhs.toFixed(1)} paq/s`}>
+              <MathBlock math="\sum w_k d_k < (1-\sum w_k u_k)\varepsilon" /> ✓
             </span>
           ) : (
-            <span className="text-rose-400 font-semibold flex items-center gap-1">
-              <MathBlock math="wd \ge (1-wu)\varepsilon" /> ✗
+            <span className="text-rose-400 font-semibold flex items-center gap-1" title={`${lhs.toFixed(1)} >= ${rhs.toFixed(1)} paq/s`}>
+              <MathBlock math="\sum w_k d_k \ge (1-\sum w_k u_k)\varepsilon" /> ✗
             </span>
           )}
         </div>

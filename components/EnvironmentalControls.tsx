@@ -6,30 +6,32 @@ import {
   EMPIRICAL_FLOW_SPEED_PAIRS,
   getFlowVelocityPair,
 } from '@/lib/simulation-engine';
-import { CloudRain, Waves, Zap, Layers, ShieldCheck } from 'lucide-react';
+import { CloudRain, Waves, Zap, Layers, ShieldCheck, Gauge } from 'lucide-react';
 import { MathBlock } from './MathBlock';
 
-// Propiedades del panel de control ambiental e hidrológico por cada Gateway
+// Propiedades del panel de control ambiental e hidrológico por cada Gateway (Nivel 1 Heterogéneo)
 interface EnvironmentalControlsProps {
   gateways: GatewayNodeState[];
   selectedGatewayIndex: number;
   onSelectGateway: (index: number) => void;
   onUpdateGatewayEnvironment: (index: number, newEnv: EnvironmentalState) => void;
+  onUpdateGatewayLambda?: (index: number, newLambda: number) => void;
   onApplyPresetToSelected: (preset: WeatherPreset) => void;
   onApplyPresetToAll?: (preset: WeatherPreset) => void;
   onTriggerSpike: (index: number) => void;
 }
 
 /**
- * Panel interactivo de telemetría ambiental por nodo.
- * Permite ajustar la precipitación pluvial P [mm] y el par hidrodinámico acoplado (Caudal Q, Velocidad v)
- * para cada estación concentradora (Gateway IoT), o disparar avalanchas repentinas.
+ * Panel interactivo de telemetría ambiental y parámetros de enlace por nodo (Nivel 1 Heterogéneo).
+ * Permite ajustar la precipitación pluvial P [mm], el par hidrodinámico acoplado (Caudal Q, Velocidad v)
+ * y la velocidad de propagación individual \lambda_k (retardo \tau_k = 1/\lambda_k) para cada Gateway IoT.
  */
 export function EnvironmentalControls({
   gateways,
   selectedGatewayIndex,
   onSelectGateway,
   onUpdateGatewayEnvironment,
+  onUpdateGatewayLambda,
   onApplyPresetToSelected,
   onApplyPresetToAll,
   onTriggerSpike,
@@ -153,13 +155,11 @@ export function EnvironmentalControls({
                   <div>
                     <div className="flex items-center gap-1.5">
                       <h4 className="text-xs font-bold text-slate-100">{gw.name}</h4>
-                      {isSelected && (
-                        <span className="text-[9px] bg-sky-950 text-sky-400 px-1 rounded border border-sky-800/60">
-                          Activo
-                        </span>
-                      )}
+                      <span className="text-[9px] font-mono bg-indigo-950/90 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-800/60">
+                        L_{idx + 1}={gw.distanceKm} km · LoRa {gw.loraSF}
+                      </span>
                     </div>
-                    <span className="text-[10px] text-slate-400 block truncate max-w-40">{gw.location}</span>
+                    <span className="text-[10px] text-slate-400 block truncate max-w-44">{gw.location}</span>
                   </div>
                 </div>
 
@@ -267,22 +267,55 @@ export function EnvironmentalControls({
                 </div>
               </div>
 
-              {/* Resumen de Telemetría Local y Empaquetado JSON en el Gateway */}
+              {/* Parámetros Heterogéneos del Enlace LoRa k (Nivel 1): Distancia L_k, Velocidad \lambda_k y Retardo \tau_k = 1/\lambda_k */}
+              <div className="flex flex-col gap-1.5 bg-slate-900/60 p-2.5 rounded-lg border border-indigo-900/50">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-indigo-300 flex items-center gap-1.5 text-[11px] font-semibold">
+                    <Gauge className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Enlace LoRa <MathBlock math={`L_{${idx + 1}}=${gw.distanceKm}\\text{ km}`} /> ({gw.loraSF})</span>
+                  </span>
+                  <span className="font-mono font-bold text-indigo-300 text-[11px] tabular-nums">
+                    τ_{idx + 1} = {gw.tau.toFixed(2)}s
+                  </span>
+                </div>
+
+                {onUpdateGatewayLambda && (
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="3.0"
+                    step="0.05"
+                    value={gw.lambda}
+                    onChange={(e) => {
+                      onUpdateGatewayLambda(idx, Number(e.target.value));
+                    }}
+                    className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-400"
+                  />
+                )}
+
+                <div className="flex justify-between text-[9px] text-slate-400 font-mono">
+                  <span>λ_{idx + 1} = {gw.lambda.toFixed(2)} s⁻¹</span>
+                  <span className="text-emerald-300">w_{idx + 1} = {gw.w.toFixed(2)}</span>
+                  <span className="text-amber-300">u_{idx + 1} = {gw.u.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Resumen de Telemetría Local, Contribución Ponderada y Empaquetado JSON */}
               <div className="bg-slate-900/90 rounded-lg p-2 border border-slate-800/80 flex flex-col gap-1 text-[11px]">
                 <div className="flex items-center justify-between text-slate-300">
                   <span className="flex items-center gap-1 text-[10px] text-slate-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400" /> Pluviómetro local (~20 B):
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400" /> Pluviómetro + Agua (~40 B crudos):
                   </span>
                   <span className="font-mono font-semibold text-sky-300 tabular-nums text-[10px]">
-                    {gw.sensors.rainSensor.generationRate.toFixed(1)} paq/s
+                    {(gw.sensors.rainSensor.generationRate + gw.sensors.waterSensor.generationRate).toFixed(1)} paq/s
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-slate-300">
                   <span className="flex items-center gap-1 text-[10px] text-slate-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400" /> Sensor Agua local (~20 B):
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" /> Flujo admitido <MathBlock math={`w_{${idx + 1}} d_{${idx + 1}}`} />:
                   </span>
-                  <span className="font-mono font-semibold text-teal-300 tabular-nums text-[10px]">
-                    {gw.sensors.waterSensor.generationRate.toFixed(1)} paq/s
+                  <span className="font-mono font-semibold text-indigo-300 tabular-nums text-[10px]">
+                    {(gw.w * gw.demand).toFixed(1)} paq/s
                   </span>
                 </div>
 
